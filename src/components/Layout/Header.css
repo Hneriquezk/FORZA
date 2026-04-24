@@ -1,0 +1,144 @@
+.main-header {
+  background: #000;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 60px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-wrap: wrap;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-logo-link {
+  text-decoration: none;
+}
+
+.header-logo {
+  height: 32px;
+  object-fit: contain;
+  cursor: pointer;
+}
+
+.header-nav {
+  display: flex;
+  gap: 42px;
+  flex-wrap: wrap;
+  align-items: center;
+  height: 100%;
+}
+
+.header-nav-link {
+  color: #aaa;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+  transition: 0.2s;
+  padding-bottom: 6px;
+  position: relative;
+}
+
+.header-nav-link:hover {
+  color: #fff;
+}
+
+.header-nav-link.active {
+  color: #fff;
+}
+
+.header-nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: -25px;
+  left: -12px;
+  right: -12px;
+  height: 3px;
+  background: #ff1e2d;
+  border-radius: 2px;
+}
+
+.header-icons {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.theme-toggle-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #fff;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.header-profile {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #ff1e2d;
+  object-fit: cover;
+}
+
+.plus-btn {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.plus-btn:hover {
+  transform: scale(1.05);
+}
+
+.plus-btn img {
+  width: 34px;
+  height: 34px;
+}
+
+@media (max-width: 768px) {
+  .main-header {
+    padding: 15px 20px;
+  }
+  .header-nav {
+    gap: 20px;
+  }
+  .header-nav-link {
+    font-size: 12px;
+  }
+  .header-nav-link.active::after {
+    bottom: -22px;
+    left: -8px;
+    right: -8px;
+  }
+}
+
+@media (max-width: 600px) {
+  .header-nav {
+    gap: 15px;
+  }
+  .header-nav-link {
+    font-size: 11px;
+  }
+  .header-nav-link.active::after {
+    bottom: -20px;
+    left: -6px;
+    right: -6px;
+  }
+}

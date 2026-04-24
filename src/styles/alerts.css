@@ -1,0 +1,381 @@
+/* ============================================
+   FORZA Custom Alerts - Enterprise Professional
+   ============================================ */
+
+/* Overlay do alert personalizado */
+.forza-alert-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 20000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: forzaFadeIn 0.2s ease-out;
+}
+
+/* Container do alert */
+.forza-alert {
+  background: var(--bg-card, #ffffff);
+  border-radius: 12px;
+  max-width: 400px;
+  width: 90%;
+  overflow: hidden;
+  animation: forzaSlideUp 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+  box-shadow: 0 20px 35px -8px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .forza-alert {
+  background: #1e1e2a;
+  box-shadow: 0 20px 35px -8px rgba(0, 0, 0, 0.4);
+}
+
+/* Header do alert */
+.forza-alert-header {
+  padding: 20px 24px 0 24px;
+  position: relative;
+}
+
+.forza-alert-icon {
+  width: 48px;
+  height: 48px;
+  background: #fef2f2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+[data-theme="dark"] .forza-alert-icon {
+  background: #2a2a35;
+}
+
+.forza-alert-icon i {
+  font-size: 24px;
+  color: #dc2626;
+}
+
+[data-theme="dark"] .forza-alert-icon i {
+  color: #ef4444;
+}
+
+.forza-alert-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary, #1a1a1a);
+  margin: 0 0 4px 0;
+  letter-spacing: -0.2px;
+}
+
+/* Corpo do alert */
+.forza-alert-body {
+  padding: 8px 24px 20px 24px;
+}
+
+.forza-alert-message {
+  color: var(--text-secondary, #4b5563);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+[data-theme="dark"] .forza-alert-message {
+  color: #9ca3af;
+}
+
+/* Input do prompt */
+.forza-alert-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--input-bg, #f9fafb);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  color: var(--text-primary, #1a1a1a);
+  font-size: 14px;
+  margin-top: 16px;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.forza-alert-input:focus {
+  outline: none;
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+[data-theme="dark"] .forza-alert-input {
+  background: #2a2a35;
+  border-color: #3a3a45;
+  color: #ffffff;
+}
+
+/* Footer com botões */
+.forza-alert-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px 24px 24px;
+  background: var(--bg-secondary, #f9fafb);
+  border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+[data-theme="dark"] .forza-alert-footer {
+  background: #16161e;
+  border-top-color: #2a2a35;
+}
+
+.forza-alert-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  border: none;
+  font-family: inherit;
+}
+
+.forza-alert-btn-cancel {
+  background: transparent;
+  color: var(--text-secondary, #6b7280);
+  border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.forza-alert-btn-cancel:hover {
+  background: var(--border-light, #f3f4f6);
+  border-color: #d1d5db;
+}
+
+[data-theme="dark"] .forza-alert-btn-cancel {
+  color: #9ca3af;
+  border-color: #3a3a45;
+}
+
+[data-theme="dark"] .forza-alert-btn-cancel:hover {
+  background: #2a2a35;
+}
+
+.forza-alert-btn-confirm {
+  background: #dc2626;
+  color: white;
+  border: none;
+}
+
+.forza-alert-btn-confirm:hover {
+  background: #b91c1c;
+  transform: translateY(-1px);
+}
+
+/* Tipos de alert */
+.forza-alert.success .forza-alert-icon {
+  background: #ecfdf5;
+}
+
+[data-theme="dark"] .forza-alert.success .forza-alert-icon {
+  background: #064e3b;
+}
+
+.forza-alert.success .forza-alert-icon i {
+  color: #059669;
+}
+
+[data-theme="dark"] .forza-alert.success .forza-alert-icon i {
+  color: #10b981;
+}
+
+.forza-alert.warning .forza-alert-icon {
+  background: #fffbeb;
+}
+
+[data-theme="dark"] .forza-alert.warning .forza-alert-icon {
+  background: #78350f;
+}
+
+.forza-alert.warning .forza-alert-icon i {
+  color: #d97706;
+}
+
+[data-theme="dark"] .forza-alert.warning .forza-alert-icon i {
+  color: #f59e0b;
+}
+
+.forza-alert.error .forza-alert-icon {
+  background: #fef2f2;
+}
+
+[data-theme="dark"] .forza-alert.error .forza-alert-icon {
+  background: #7f1d1d;
+}
+
+.forza-alert.error .forza-alert-icon i {
+  color: #dc2626;
+}
+
+[data-theme="dark"] .forza-alert.error .forza-alert-icon i {
+  color: #ef4444;
+}
+
+.forza-alert.info .forza-alert-icon {
+  background: #eff6ff;
+}
+
+[data-theme="dark"] .forza-alert.info .forza-alert-icon {
+  background: #1e3a5f;
+}
+
+.forza-alert.info .forza-alert-icon i {
+  color: #2563eb;
+}
+
+[data-theme="dark"] .forza-alert.info .forza-alert-icon i {
+  color: #3b82f6;
+}
+
+/* Animações */
+@keyframes forzaFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes forzaSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Toast Notifications */
+.forza-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  transform: translateX(0);
+  background: var(--bg-card, #ffffff);
+  border-radius: 8px;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 20001;
+  animation: forzaToastIn 0.3s ease forwards;
+  border-left: 3px solid;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  max-width: 380px;
+}
+
+[data-theme="dark"] .forza-toast {
+  background: #1e1e2a;
+}
+
+.forza-toast-success {
+  border-left-color: #059669;
+}
+.forza-toast-success .forza-toast-icon i {
+  color: #059669;
+}
+
+.forza-toast-warning {
+  border-left-color: #d97706;
+}
+.forza-toast-warning .forza-toast-icon i {
+  color: #d97706;
+}
+
+.forza-toast-error {
+  border-left-color: #dc2626;
+}
+.forza-toast-error .forza-toast-icon i {
+  color: #dc2626;
+}
+
+.forza-toast-info {
+  border-left-color: #2563eb;
+}
+.forza-toast-info .forza-toast-icon i {
+  color: #2563eb;
+}
+
+.forza-toast-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.forza-toast-icon i {
+  font-size: 16px;
+}
+
+.forza-toast-message {
+  color: var(--text-primary, #1a1a1a);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+[data-theme="dark"] .forza-toast-message {
+  color: #ffffff;
+}
+
+@keyframes forzaToastIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes forzaToastOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+}
+
+/* Para dispositivos móveis */
+@media (max-width: 480px) {
+  .forza-alert {
+    width: 95%;
+    max-width: 95%;
+  }
+  
+  .forza-alert-header h3 {
+    font-size: 16px;
+  }
+  
+  .forza-alert-message {
+    font-size: 13px;
+  }
+  
+  .forza-alert-btn {
+    padding: 10px;
+    font-size: 13px;
+  }
+  
+  .forza-toast {
+    right: 16px;
+    left: 16px;
+    max-width: none;
+  }
+}
