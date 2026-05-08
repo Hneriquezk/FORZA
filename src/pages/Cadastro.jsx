@@ -83,7 +83,7 @@ function Cadastro() {
   }
 
   return (
-    <>
+    <div className="cadastro-page-wrapper">
       <Header />
       
       <div className="cadastro-container">
@@ -195,7 +195,7 @@ function Cadastro() {
       </div>
 
       <Footer />
-    </>
+    </div>
   )
 }
 

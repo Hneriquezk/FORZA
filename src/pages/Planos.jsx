@@ -561,11 +561,39 @@ const Planos = () => {
         .btn-cancel {
           flex: 1;
           background: var(--border-light);
-          border: none;
+          border: 1px solid var(--border-color);
           padding: 12px;
           border-radius: 40px;
           font-weight: 600;
           cursor: pointer;
+          color: var(--text-primary);
+          transition: all 0.2s;
+        }
+
+        .btn-cancel:hover {
+          background: var(--border-color);
+          transform: translateY(-1px);
+        }
+
+        [data-theme="light"] .btn-cancel {
+          background: #f0f2f8;
+          color: #1a1a1a;
+          border-color: #e2e8f0;
+        }
+
+        [data-theme="light"] .btn-cancel:hover {
+          background: #e2e8f0;
+        }
+
+        [data-theme="dark"] .btn-cancel {
+          background: #2a2a2a;
+          color: #ffffff;
+          border-color: #444444;
+        }
+
+        [data-theme="dark"] .btn-cancel:hover {
+          background: #3a3a3a;
+          border-color: #ff1e2d;
         }
         
         .btn-confirm {

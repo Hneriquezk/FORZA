@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useNotifications } from '../contexts/NotificationContext'
 import Header from '../components/Layout/Header'
@@ -14,6 +14,9 @@ function Painel() {
   const [curtidas, setCurtidas] = useState({})
   const [comentarios, setComentarios] = useState({})
   const [comentariosVisiveis, setComentariosVisiveis] = useState({})
+  
+  // Estado para controlar quem o usuário está seguindo
+  const [seguindo, setSeguindo] = useState({})
 
   // Dados dos posts
   const postsData = [
@@ -79,13 +82,34 @@ function Painel() {
     }
   ]
 
+  // Lista de amigos sugeridos
+  const amigosSugeridos = [
+    { id: 1, nome: "Henrique Santosz", localizacao: "São José dos Campos, SP, Brasil", avatar: "/img/usuarios/henrique_santosz.jpg" },
+    { id: 2, nome: "Giovanni Borsoli", localizacao: "Caçapava, SP, Brasil", avatar: "/img/usuarios/giovanni_borsoi.jpg" },
+    { id: 3, nome: "Gabriel Bastos", localizacao: "Caçapava, SP, Brasil", avatar: "/img/usuarios/gabriel.png" },
+    { id: 4, nome: "Nino Schurter", localizacao: "Chur, GR, Suíça", avatar: "/img/usuarios/nino.png", verified: true }
+  ]
+
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login')
       return
     }
     
-    // Inicializar estados
+    // Carregar estado de seguir do localStorage
+    const savedSeguindo = localStorage.getItem('forza_seguindo')
+    if (savedSeguindo) {
+      setSeguindo(JSON.parse(savedSeguindo))
+    } else {
+      // Inicializar todos como não seguindo
+      const initialSeguindo = {}
+      amigosSugeridos.forEach(amigo => {
+        initialSeguindo[amigo.id] = false
+      })
+      setSeguindo(initialSeguindo)
+    }
+    
+    // Inicializar estados dos posts
     const curtidasIniciais = {}
     const comentariosIniciais = {}
     postsData.forEach(post => {
@@ -97,6 +121,26 @@ function Painel() {
     
     setLoading(false)
   }, [isAuthenticated, navigate])
+
+  // Função para seguir/deixar de seguir
+  const handleSeguir = (amigoId, amigoNome) => {
+    setSeguindo(prev => {
+      const novoEstado = !prev[amigoId]
+      const novaLista = { ...prev, [amigoId]: novoEstado }
+      
+      // Salvar no localStorage
+      localStorage.setItem('forza_seguindo', JSON.stringify(novaLista))
+      
+      // Mostrar notificação
+      if (novoEstado) {
+        addNotification('➕ Seguindo', `Você começou a seguir ${amigoNome}`, 'success', 'fa-user-plus')
+      } else {
+        addNotification('➖ Deixou de seguir', `Você deixou de seguir ${amigoNome}`, 'info', 'fa-user-minus')
+      }
+      
+      return novaLista
+    })
+  }
 
   const handleCurtir = (postId) => {
     setCurtidas(prev => {
@@ -321,7 +365,7 @@ function Painel() {
             <div className="rcard" style={{ background: 'var(--bg-card)', borderRadius: '20px', padding: '20px', marginBottom: '24px', border: '1px solid var(--border-color)' }}>
               <div className="rcard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <span className="rcard-title" style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>Desafios Ativos</span>
-                <a href="/desafios" className="ver-todos" style={{ fontSize: '12px', color: '#ff1e2d', textDecoration: 'none' }}>Ver todos <i className="fa-solid fa-chevron-right"></i></a>
+                <Link to="/desafios" className="ver-todos" style={{ fontSize: '12px', color: '#ff1e2d', textDecoration: 'none' }}>Ver todos <i className="fa-solid fa-chevron-right"></i></Link>
               </div>
               <div className="desafio-item" style={{ marginBottom: '20px' }}>
                 <div className="desafio-top" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
@@ -386,61 +430,53 @@ function Painel() {
                   <div className="clube-link" style={{ fontSize: '11px', color: '#ff1e2d', cursor: 'pointer' }}>Visualizar Clube →</div>
                 </div>
               </div>
-              <div className="clube-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }} onClick={() => navigate('/clubes')}>
-                <img src="/img/outros/parkrun.png" className="profile_avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} alt="Clube" />
-                <div className="clube-info" style={{ flex: 1 }}>
-                  <div className="clube-name" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Parkrun UK <span className="verified" style={{ color: '#3b82f6' }}><i className="fa-solid fa-circle-check"></i></span></div>
-                  <div className="clube-link" style={{ fontSize: '11px', color: '#ff1e2d', cursor: 'pointer' }}>Visualizar Clube →</div>
-                </div>
-              </div>
               <div className="clube-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', cursor: 'pointer' }} onClick={() => navigate('/clubes')}>
-                <img src="/img/outros/red_bull.png" className="profile_avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} alt="Clube" />
+                <img src="/img/forza icon.png" className="profile_avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} alt="Clube" />
                 <div className="clube-info" style={{ flex: 1 }}>
-                  <div className="clube-name" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Red Bull UK <span className="verified" style={{ color: '#3b82f6' }}><i className="fa-solid fa-circle-check"></i></span></div>
+                  <div className="clube-name" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>FORZA <span className="verified" style={{ color: '#3b82f6' }}><i className="fa-solid fa-circle-check"></i></span></div>
                   <div className="clube-link" style={{ fontSize: '11px', color: '#ff1e2d', cursor: 'pointer' }}>Visualizar Clube →</div>
                 </div>
               </div>
             </div>
 
-            {/* Amigos Sugeridos */}
+            {/* Amigos Sugeridos - COM BOTÃO SEGUIR FUNCIONAL */}
             <div className="rcard" style={{ background: 'var(--bg-card)', borderRadius: '20px', padding: '20px', border: '1px solid var(--border-color)' }}>
               <div className="rcard-header" style={{ marginBottom: '16px' }}>
                 <span className="rcard-title" style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <i className="fa-solid fa-user-group" style={{ color: '#888', fontSize: '12px' }}></i> Amigos sugeridos
                 </span>
               </div>
-              <div className="amigo-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
-                <img src="/img/usuarios/henrique_santosz.jpg" className="profile_avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} alt="Amigo" />
-                <div className="amigo-info" style={{ flex: 1 }}>
-                  <div className="amigo-name" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Henrique Santosz</div>
-                  <div className="amigo-location" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>São José dos Campos, SP, Brasil</div>
+              
+              {amigosSugeridos.map(amigo => (
+                <div key={amigo.id} className="amigo-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
+                  <img src={amigo.avatar} className="profile_avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} alt={amigo.nome} />
+                  <div className="amigo-info" style={{ flex: 1 }}>
+                    <div className="amigo-name" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {amigo.nome}
+                      {amigo.verified && <i className="fa-solid fa-circle-check" style={{ color: '#3b82f6', fontSize: '12px', marginLeft: '4px' }}></i>}
+                    </div>
+                    <div className="amigo-location" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{amigo.localizacao}</div>
+                  </div>
+                  <button 
+                    className={`seguir-btn ${seguindo[amigo.id] ? 'seguindo' : ''}`}
+                    onClick={() => handleSeguir(amigo.id, amigo.nome)}
+                    style={{ 
+                      background: seguindo[amigo.id] ? '#ff1e2d' : 'var(--border-light)',
+                      border: seguindo[amigo.id] ? 'none' : '1px solid var(--border-color)',
+                      padding: '6px 16px',
+                      borderRadius: '30px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      color: seguindo[amigo.id] ? 'white' : 'var(--text-secondary)',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <i className={seguindo[amigo.id] ? 'fas fa-check' : 'fas fa-user-plus'} style={{ marginRight: '6px', fontSize: '10px' }}></i>
+                    {seguindo[amigo.id] ? 'Seguindo' : 'Seguir'}
+                  </button>
                 </div>
-                <button className="seguir-btn" style={{ background: 'var(--border-light)', border: 'none', padding: '6px 16px', borderRadius: '30px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', color: 'var(--text-secondary)' }}>Seguir</button>
-              </div>
-              <div className="amigo-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
-                <img src="/img/usuarios/giovanni_borsoi.jpg" className="profile_avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} alt="Amigo" />
-                <div className="amigo-info" style={{ flex: 1 }}>
-                  <div className="amigo-name" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Giovanni Borsoli</div>
-                  <div className="amigo-location" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Caçapava, SP, Brasil</div>
-                </div>
-                <button className="seguir-btn" style={{ background: 'var(--border-light)', border: 'none', padding: '6px 16px', borderRadius: '30px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', color: 'var(--text-secondary)' }}>Seguir</button>
-              </div>
-              <div className="amigo-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
-                <img src="/img/usuarios/gabriel.png" className="profile_avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} alt="Amigo" />
-                <div className="amigo-info" style={{ flex: 1 }}>
-                  <div className="amigo-name" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Gabriel Bastos</div>
-                  <div className="amigo-location" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Caçapava, SP, Brasil</div>
-                </div>
-                <button className="seguir-btn" style={{ background: 'var(--border-light)', border: 'none', padding: '6px 16px', borderRadius: '30px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', color: 'var(--text-secondary)' }}>Seguir</button>
-              </div>
-              <div className="amigo-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0' }}>
-                <img src="/img/usuarios/nino.png" className="profile_avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} alt="Amigo" />
-                <div className="amigo-info" style={{ flex: 1 }}>
-                  <div className="amigo-name" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Nino Schurter <i className="fa-solid fa-circle-check" style={{ color: '#3b82f6', fontSize: '10px' }}></i></div>
-                  <div className="amigo-location" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Chur, GR, Suíça</div>
-                </div>
-                <button className="seguir-btn" style={{ background: 'var(--border-light)', border: 'none', padding: '6px 16px', borderRadius: '30px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', color: 'var(--text-secondary)' }}>Seguir</button>
-              </div>
+              ))}
             </div>
           </div>
         </div>

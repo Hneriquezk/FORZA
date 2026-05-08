@@ -52,7 +52,7 @@ function Login() {
   }
 
   return (
-    <>
+    <div className="login-page-wrapper">
       <Header />
       
       <div className="login-container">
@@ -142,7 +142,7 @@ function Login() {
       </div>
 
       <Footer />
-    </>
+    </div>
   )
 }
 

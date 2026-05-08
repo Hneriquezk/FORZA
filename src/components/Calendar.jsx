@@ -352,7 +352,6 @@ const Calendar = ({ onSelectDate, activities, onAddActivity }) => {
           <div className="calendar-modal" onClick={(e) => e.stopPropagation()}>
             <div className="calendar-modal-header">
               <h3>
-                <i className="fas fa-calendar-plus"></i>
                 {selectedActivity ? 'Editar Atividade' : 'Nova Atividade'}
               </h3>
               <button className="calendar-modal-close" onClick={() => setShowEditModal(false)}>
@@ -759,17 +758,17 @@ const Calendar = ({ onSelectDate, activities, onAddActivity }) => {
           align-items: center;
           background: linear-gradient(135deg, #ff1e2d, #e5182a);
           border-radius: 24px 24px 0 0;
-          color: white;
           position: sticky;
           top: 0;
         }
-        
+
         .calendar-modal-header h3 {
           margin: 0;
           font-size: 18px;
           display: flex;
           align-items: center;
           gap: 8px;
+          color: white !important;  /* ← FORÇA A COR BRANCA */
         }
         
         .calendar-modal-close {
@@ -892,15 +891,45 @@ const Calendar = ({ onSelectDate, activities, onAddActivity }) => {
           background: var(--bg-card);
         }
         
+        /* Botão Cancelar - Funciona em ambos os temas */
         .calendar-btn-cancel {
           flex: 1;
           background: var(--border-light);
-          border: none;
+          border: 1px solid var(--border-color);
           padding: 12px;
           border-radius: 40px;
           font-weight: 600;
           cursor: pointer;
-          color: var(--text-secondary);
+          color: var(--text-primary);
+          transition: all 0.2s;
+        }
+
+        .calendar-btn-cancel:hover {
+          background: var(--border-color);
+          transform: translateY(-1px);
+        }
+
+        /* Modo claro específico para cancelar */
+        [data-theme="light"] .calendar-btn-cancel {
+          background: #f0f2f8;
+          color: #1a1a1a;
+          border-color: #e2e8f0;
+        }
+
+        [data-theme="light"] .calendar-btn-cancel:hover {
+          background: #e2e8f0;
+        }
+
+        /* Modo escuro específico para cancelar */
+        [data-theme="dark"] .calendar-btn-cancel {
+          background: #2a2a2a;
+          color: #ffffff;
+          border-color: #444444;
+        }
+
+        [data-theme="dark"] .calendar-btn-cancel:hover {
+          background: #3a3a3a;
+          border-color: #ff1e2d;
         }
         
         .calendar-btn-save {

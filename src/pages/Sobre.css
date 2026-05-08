@@ -7,8 +7,6 @@
 
 /* Hero Section */
 .sobre-hero {
-  background: linear-gradient(135deg, rgba(255, 30, 45, 0.1), #0f172a);
-  border-radius: 28px;
   padding: 60px 40px;
   text-align: center;
   margin-bottom: 40px;
@@ -18,13 +16,13 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 30, 45, 0.15);
+  background: #ff1e2d;
   padding: 8px 20px;
   border-radius: 40px;
   margin-bottom: 20px;
   font-size: 14px;
   font-weight: 600;
-  color: #ff1e2d;
+  color: white;
 }
 
 .sobre-hero h1 {
@@ -41,32 +39,114 @@
   margin: 0 auto;
 }
 
-/* FAQ Section */
-.sobre-faq-section {
-  background: var(--bg-card);
-  border-radius: 28px;
-  padding: 40px;
+/* Categorias */
+.sobre-categorias {
   margin-bottom: 40px;
-  box-shadow: var(--shadow);
+}
+
+.sobre-categorias-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.sobre-categoria-card {
+  background: var(--bg-card);
+  border-radius: 20px;
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
   border: 1px solid var(--border-color);
 }
 
+.sobre-categoria-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+}
+
+.sobre-categoria-card.active {
+  border-color: #ff1e2d;
+  background: #ff1e2d08;
+}
+
+.sobre-categoria-icon {
+  width: 60px;
+  height: 60px;
+  background: #ff1e2d20;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.sobre-categoria-icon i {
+  font-size: 28px;
+  color: #ff1e2d;
+}
+
+.sobre-categoria-card h4 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.sobre-categoria-card p {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* FAQ Section */
+.sobre-faq-section {
+  padding: 40px;
+  margin-bottom: 40px;
+}
+
 .sobre-faq-section h2 {
-  text-align: center;
   font-size: 28px;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 32px;
+  margin-bottom: 24px;
+}
+
+.sobre-faq-busca {
+  display: flex;
+  gap: 12px;
+  background: var(--chat-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 15px;
+  padding: 12px 20px;
+  margin-bottom: 30px;
+  max-width: 700px;
+}
+
+.sobre-faq-busca i {
+  color: var(--text-secondary);
+  font-size: 18px;
+}
+
+.sobre-faq-busca input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.sobre-faq-busca input::placeholder {
+  color: var(--text-light);
 }
 
 .sobre-faq-lista {
-  max-width: 800px;
-  margin: 0 auto;
+  max-width: 10000px;
 }
 
 .sobre-faq-item {
   border: 1px solid var(--border-color);
-  border-radius: 20px;
+  border-radius: 16px;
   margin-bottom: 16px;
   overflow: hidden;
   transition: all 0.3s ease;
@@ -80,8 +160,7 @@
 .sobre-faq-pergunta {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 18px 24px;
+  padding: 16px 20px;
   cursor: pointer;
   font-weight: 600;
   background: var(--bg-card);
@@ -99,11 +178,22 @@
 }
 
 .sobre-faq-resposta {
-  padding: 18px 24px;
+  padding: 16px 20px;
   border-top: 1px solid var(--border-color);
   color: var(--text-secondary);
   line-height: 1.6;
   background: var(--chat-bg);
+}
+
+.sobre-faq-empty {
+  padding: 40px;
+  color: var(--text-secondary);
+}
+
+.sobre-faq-empty i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
 }
 
 /* Contato Section */
@@ -310,71 +400,6 @@
   color: #b91c2c;
 }
 
-/* Valores da Empresa */
-.sobre-valores {
-  background: var(--bg-card);
-  border-radius: 28px;
-  padding: 40px;
-  margin-top: 20px;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border-color);
-}
-
-.sobre-valores h3 {
-  text-align: center;
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-
-.sobre-valores h3 i {
-  color: #ff1e2d;
-}
-
-.sobre-valores-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 30px;
-}
-
-.sobre-valor-item {
-  text-align: center;
-  padding: 24px;
-  background: var(--chat-bg);
-  border-radius: 20px;
-  transition: all 0.3s ease;
-  border: 1px solid var(--border-color);
-}
-
-.sobre-valor-item:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-hover);
-}
-
-.sobre-valor-item i {
-  font-size: 36px;
-  color: #ff1e2d;
-  margin-bottom: 16px;
-}
-
-.sobre-valor-item h4 {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-}
-
-.sobre-valor-item p {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
 /* Loading */
 .sobre-loading {
   display: flex;
@@ -409,8 +434,8 @@
     font-size: 40px;
   }
   
-  .sobre-valores-grid {
-    gap: 20px;
+  .sobre-categorias-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -444,17 +469,8 @@
     gap: 20px;
   }
   
-  .sobre-valores-grid {
+  .sobre-categorias-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-  }
-  
-  .sobre-valores {
-    padding: 30px;
-  }
-  
-  .sobre-valores h3 {
-    font-size: 22px;
   }
 }
 
@@ -479,6 +495,10 @@
     padding: 20px;
   }
   
+  .sobre-categorias-grid {
+    grid-template-columns: 1fr;
+  }
+  
   .sobre-faq-pergunta {
     padding: 14px 18px;
     font-size: 14px;
@@ -492,14 +512,6 @@
   .sobre-contato-form,
   .sobre-canais-card {
     padding: 24px;
-  }
-  
-  .sobre-valores-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .sobre-valor-item {
-    padding: 20px;
   }
   
   .sobre-canal-icon {

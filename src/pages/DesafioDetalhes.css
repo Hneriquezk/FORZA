@@ -1,0 +1,353 @@
+/* DesafioDetalhes.css - com prefixo 'detalhes-' para não conflitar */
+.detalhes-page {
+  background: #efefef;
+  min-height: 100vh;
+}
+
+[data-theme="dark"] .detalhes-page {
+  background: var(--bg-primary);
+}
+
+/* Banner */
+.detalhes-banner {
+  width: 100%;
+  height: 280px;
+  position: relative;
+  overflow: hidden;
+}
+
+.detalhes-banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Card Principal */
+.detalhes-card-principal {
+  max-width: 1100px;
+  margin: -60px auto 80px;
+  background: white;
+  padding: 40px;
+  border-radius: 4px;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .detalhes-card-principal {
+  background: var(--bg-card);
+}
+
+.detalhes-medalha {
+  position: absolute;
+  top: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.detalhes-medalha img {
+  width: 90px;
+}
+
+/* Topo do Desafio */
+.detalhes-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 60px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.detalhes-info {
+  flex: 2;
+}
+
+.detalhes-info h1 {
+  font-size: 22px;
+  font-weight: 500;
+  margin-bottom: 10px;
+  color: #1a1a1a;
+}
+
+[data-theme="dark"] .detalhes-info h1 {
+  color: var(--text-primary);
+}
+
+.detalhes-info strong {
+  font-weight: 700;
+}
+
+.detalhes-sub {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 25px;
+}
+
+[data-theme="dark"] .detalhes-sub {
+  color: var(--text-secondary);
+}
+
+.detalhes-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.detalhes-item {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  color: #444;
+}
+
+[data-theme="dark"] .detalhes-item {
+  color: var(--text-secondary);
+}
+
+.detalhes-item i {
+  color: #888;
+  width: 18px;
+}
+
+/* Ações do Desafio */
+.detalhes-acoes {
+  width: 240px;
+}
+
+.detalhes-btn-participar {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  background: linear-gradient(135deg, #ff1e2d, #e5182a);
+  color: white;
+  font-weight: 600;
+  border-radius: 40px;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.detalhes-btn-participar:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(255, 30, 45, 0.3);
+}
+
+.detalhes-btn-participar.participando {
+  background: #10b981;
+  cursor: default;
+}
+
+.detalhes-btn-participar:disabled {
+  opacity: 0.9;
+  cursor: default;
+}
+
+.detalhes-btn-convidar {
+  width: 100%;
+  padding: 9px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 40px;
+  cursor: pointer;
+  transition: 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+[data-theme="dark"] .detalhes-btn-convidar {
+  background: var(--chat-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.detalhes-btn-convidar:hover {
+  background: #e0e0e0;
+}
+
+.detalhes-participantes {
+  font-size: 12px;
+  margin-top: 10px;
+  text-align: center;
+}
+
+[data-theme="dark"] .detalhes-participantes {
+  color: var(--text-secondary);
+}
+
+.detalhes-participantes strong {
+  font-size: 18px;
+  color: #ff1e2d;
+}
+
+.detalhes-clube-organizador {
+  margin-top: 30px;
+}
+
+.detalhes-org {
+  font-size: 10px;
+  color: #999;
+  margin-bottom: 10px;
+}
+
+.detalhes-clube {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.detalhes-clube img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.detalhes-clube span {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.detalhes-btn-clube {
+  width: 100%;
+  padding: 8px;
+  background: #f3f3f3;
+  border: 1px solid #ddd;
+  border-radius: 40px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: 0.2s;
+}
+
+[data-theme="dark"] .detalhes-btn-clube {
+  background: var(--chat-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.detalhes-btn-clube:hover {
+  background: #e0e0e0;
+}
+
+/* Conteúdo do Desafio */
+.detalhes-conteudo {
+  display: flex;
+  gap: 80px;
+  margin-top: 50px;
+  flex-wrap: wrap;
+}
+
+.detalhes-visao {
+  flex: 1;
+}
+
+.detalhes-qualificacao {
+  flex: 1;
+}
+
+.detalhes-conteudo h3 {
+  font-size: 16px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #1a1a1a;
+}
+
+[data-theme="dark"] .detalhes-conteudo h3 {
+  color: var(--text-primary);
+}
+
+.detalhes-conteudo h3 i {
+  color: #ff1e2d;
+}
+
+.detalhes-conteudo p {
+  font-size: 13px;
+  color: #444;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+[data-theme="dark"] .detalhes-conteudo p {
+  color: var(--text-secondary);
+}
+
+.detalhes-conteudo p strong {
+  display: block;
+  margin-top: 16px;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+}
+
+/* Responsividade */
+@media (max-width: 968px) {
+  .detalhes-card-principal {
+    margin: -60px 20px 60px;
+    padding: 30px;
+  }
+  
+  .detalhes-top {
+    gap: 30px;
+  }
+  
+  .detalhes-conteudo {
+    gap: 40px;
+  }
+}
+
+@media (max-width: 768px) {
+  .detalhes-banner {
+    height: 200px;
+  }
+  
+  .detalhes-card-principal {
+    padding: 24px;
+  }
+  
+  .detalhes-top {
+    flex-direction: column;
+  }
+  
+  .detalhes-acoes {
+    width: 100%;
+  }
+  
+  .detalhes-medalha img {
+    width: 70px;
+  }
+  
+  .detalhes-conteudo {
+    flex-direction: column;
+    gap: 30px;
+  }
+  
+  .detalhes-info h1 {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .detalhes-banner {
+    height: 150px;
+  }
+  
+  .detalhes-card-principal {
+    margin: -40px 15px 40px;
+    padding: 20px;
+  }
+  
+  .detalhes-medalha img {
+    width: 55px;
+  }
+  
+  .detalhes-item {
+    font-size: 11px;
+  }
+}

@@ -42,28 +42,6 @@ export const usuarios = [
     seguindo: 345,
     verificado: false,
     bio: "🏃 Corredor | 🚴 Ciclista | 🏊 Nadador | 🌟 Amante de desafios e novas aventuras"
-  },
-  {
-    id: 5,
-    nome: "Nino Schurter",
-    avatar: "/img/usuarios/nino.png",
-    local: "Chur, GR, Suíça",
-    atividades: 456,
-    seguidores: 1234,
-    seguindo: 89,
-    verificado: true,
-    bio: "Campeão mundial de Mountain Bike"
-  },
-  {
-    id: 6,
-    nome: "Henrique Avancini",
-    avatar: "/img/usuarios/avatar_avancini.png",
-    local: "Petrópolis, RJ",
-    atividades: 312,
-    seguidores: 890,
-    seguindo: 120,
-    verificado: true,
-    bio: "Atleta profissional de Mountain Bike"
   }
 ]
 
@@ -84,7 +62,10 @@ export const postsData = [
     ],
     imagens: ["/img/atividade_perfil3.png", "/img/atividade_perfil.png"],
     curtidas: 42,
-    comentarios: 8
+    comentarios: [
+      { usuario: "Henrique Santosz", avatar: "/img/usuarios/henrique_santosz.jpg", texto: "Grande treino! 👏", data: "2h atrás" },
+      { usuario: "Giovanni Borsoi", avatar: "/img/usuarios/giovanni_borsoi.jpg", texto: "Bora pra cima!", data: "1h atrás" }
+    ]
   },
   {
     id: 2,
@@ -102,24 +83,8 @@ export const postsData = [
     ],
     imagens: ["/img/atividade_perfil2.png", "/img/atividade_perfil4.png"],
     curtidas: 67,
-    comentarios: 12
-  },
-  {
-    id: 3,
-    usuarioId: 1,
-    usuario: "Vitor Vaz",
-    avatar: "/img/usuarios/vitor_vaz.jpg",
-    data: "10 de Março, 2026",
-    local: "São José dos Campos, SP",
-    atividade: "Treino de Natação",
-    icone: "fa-water",
-    metricas: [
-      { label: "Distância", valor: "2,5 km" },
-      { label: "Tempo", valor: "00:48:22" },
-      { label: "Estilo", valor: "Arrastar" }
-    ],
-    imagens: ["/img/atividades/natacao_treino.png", "/img/atividades/nadando.png"],
-    curtidas: 67,
-    comentarios: 12
+    comentarios: [
+      { usuario: "Gabriel Bastos", avatar: "/img/usuarios/gabriel.png", texto: "Que pedalada!", data: "3h atrás" }
+    ]
   }
 ]

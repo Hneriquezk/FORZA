@@ -34,7 +34,6 @@ const Clubes = () => {
     if (saved) setMembros(JSON.parse(saved))
   }, [])
 
-  // Função corrigida - com async/await e confirm funcionando
   const entrarClube = async (id, nome) => {
     const isMembro = membros.includes(id)
     
@@ -60,6 +59,10 @@ const Clubes = () => {
         addNotification('Bem-vindo ao clube!', `Você entrou no clube "${nome}".`, 'success', 'fa-check-circle')
       }
     }
+  }
+
+  const irParaClube = (clubeId) => {
+    navigate(`/clube/${clubeId}`)
   }
 
   const filteredClubes = clubesData.filter(clube => {
@@ -116,7 +119,7 @@ const Clubes = () => {
           {filteredClubes.map(clube => {
             const isMembro = membros.includes(clube.id)
             return (
-              <div key={clube.id} className="clube-card">
+              <div key={clube.id} className="clube-card" onClick={() => isMembro && irParaClube(clube.id)}>
                 <div className="clube-capa">
                   <img src={clube.capa} alt={clube.nome} />
                   <div className="clube-avatar-wrapper">
@@ -135,14 +138,19 @@ const Clubes = () => {
                       <strong>{clube.membros.toLocaleString()}</strong> membros
                     </div>
                   </div>
-                  <button className={`btn-entrar ${isMembro ? 'membro' : ''}`} onClick={() => entrarClube(clube.id, clube.nome)}>
-                    <i className={`fas ${isMembro ? 'fa-check-circle' : 'fa-sign-in-alt'}`}></i>
-                    {isMembro ? 'Membro' : 'Entrar'}
-                  </button>
-                  {isMembro && (
-                    <button className="btn-chat" onClick={() => setSelectedChat({ id: clube.id, nome: clube.nome })}>
-                      <i className="fas fa-comment-dots"></i> Chat do Clube
+                  {!isMembro ? (
+                    <button className="btn-entrar" onClick={(e) => { e.stopPropagation(); entrarClube(clube.id, clube.nome) }}>
+                      <i className="fas fa-sign-in-alt"></i> Entrar
                     </button>
+                  ) : (
+                    <div className="clube-member-actions">
+                      <button className="btn-membro" onClick={(e) => { e.stopPropagation(); irParaClube(clube.id) }}>
+                        <i className="fas fa-eye"></i> Ver Clube
+                      </button>
+                      <button className="btn-chat" onClick={(e) => { e.stopPropagation(); setSelectedChat({ id: clube.id, nome: clube.nome }) }}>
+                        <i className="fas fa-comment-dots"></i> Chat
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -282,6 +290,7 @@ const Clubes = () => {
           display: flex;
           flex-direction: column;
           height: 100%;
+          cursor: pointer;
         }
         
         .clube-card:hover {
@@ -401,14 +410,35 @@ const Clubes = () => {
           flex-shrink: 0;
         }
         
-        .btn-entrar.membro {
+        .clube-member-actions {
+          display: flex;
+          gap: 10px;
+          flex-shrink: 0;
+        }
+        
+        .btn-membro {
+          flex: 1;
           background: var(--chat-bg);
           border: 1px solid var(--border-color);
+          padding: 10px;
+          border-radius: 40px;
           color: #10b981;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          transition: 0.2s;
+        }
+        
+        .btn-membro:hover {
+          background: #10b98120;
+          border-color: #10b981;
         }
         
         .btn-chat {
-          width: 100%;
+          flex: 1;
           background: transparent;
           border: 1px solid var(--border-color);
           padding: 10px;
@@ -522,6 +552,9 @@ const Clubes = () => {
           }
           .clube-tipo {
             white-space: normal;
+          }
+          .clube-member-actions {
+            flex-direction: column;
           }
         }
       `}</style>

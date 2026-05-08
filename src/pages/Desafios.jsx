@@ -53,7 +53,7 @@ const Desafios = () => {
       const newParticipados = participados.filter(id => id !== desafioId)
       setParticipados(newParticipados)
       localStorage.setItem('forza_desafios_participados', JSON.stringify(newParticipados))
-      addNotification('Desafio cancelado', `Você cancelou sua participação no desafio "${titulo}".`, 'info', 'fa-times-circle')
+      addNotification('Desafio cancelado', `Você cancelou sua participação no desafio "${titulo}".`, 'info', 'fa-person-swimming')
     }
   }
 
@@ -67,7 +67,7 @@ const Desafios = () => {
     switch(category) {
       case 'tempo': return 'fa-clock'
       case 'distancia': return 'fa-road'
-      case 'calorias': return 'fa-fire'
+      case 'calorias': return 'fa-fyre'
       default: return 'fa-trophy'
     }
   }
@@ -177,13 +177,13 @@ const Desafios = () => {
 
         <div className="categoria-tabs">
           <button className={`categoria-btn ${activeCategory === 'tempo' ? 'active' : ''}`} onClick={() => setActiveCategory('tempo')}>
-            <i className="fas fa-clock"></i> Corrida
+            <i className="fas fa-running"></i> Corrida
           </button>
           <button className={`categoria-btn ${activeCategory === 'distancia' ? 'active' : ''}`} onClick={() => setActiveCategory('distancia')}>
             <i className="fas fa-bicycle"></i> Ciclismo
           </button>
           <button className={`categoria-btn ${activeCategory === 'calorias' ? 'active' : ''}`} onClick={() => setActiveCategory('calorias')}>
-            <i className="fas fa-fire"></i> Natação
+            <i className="fas fa-person-swimming"></i> Natação
           </button>
         </div>
 
@@ -427,8 +427,8 @@ const Desafios = () => {
         }
         
         .hero-medalha {
-          width: 140px;
-          height: 140px;
+          width: 180px;
+          height: 180px;
           object-fit: contain;
           position: relative;
           z-index: 1;

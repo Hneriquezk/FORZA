@@ -1,3 +1,16 @@
+.login-page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.login-container {
+  display: flex;
+  flex: 1;
+  min-height: calc(100vh - 73px - 220px);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+}
+
 * {
     margin: 0;
     padding: 0;
