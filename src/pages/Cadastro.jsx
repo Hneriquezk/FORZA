@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import { useNotifications } from '../contexts/NotificationContext'
 import Header from '../components/Layout/Header'
 import Footer from '../components/Layout/Footer'
@@ -7,6 +8,7 @@ import './cadastro.css'
 
 function Cadastro() {
   const navigate = useNavigate()
+  const { cadastrar } = useAuth()
   const { addNotification } = useNotifications()
   const [formData, setFormData] = useState({
     nome: '',
@@ -15,6 +17,7 @@ function Cadastro() {
     confirmarSenha: ''
   })
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -25,7 +28,7 @@ function Cadastro() {
     setError('')
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     
     if (!formData.nome || !formData.email || !formData.senha || !formData.confirmarSenha) {
@@ -49,37 +52,28 @@ function Cadastro() {
       return
     }
 
-    try {
-      const usuariosExistentes = localStorage.getItem('usuarios')
-      let usuarios = usuariosExistentes ? JSON.parse(usuariosExistentes) : []
-      
-      if (usuarios.some(u => u.email === formData.email)) {
-        setError('Este e-mail já está cadastrado!')
-        return
-      }
+    setLoading(true)
 
-      const novoUsuario = {
-        id: Date.now(),
-        nome: formData.nome,
-        email: formData.email,
-        senha: formData.senha,
-        avatar: '/img/usuarios/default.jpg',
-        dataCadastro: new Date().toISOString()
-      }
-
-      usuarios.push(novoUsuario)
-      localStorage.setItem('usuarios', JSON.stringify(usuarios))
-      
+    const result = await cadastrar({
+      nome: formData.nome,
+      email: formData.email,
+      senha: formData.senha
+    })
+    
+    console.log('Resultado do cadastro:', result)
+    
+    if (result.success) {
       addNotification('🎉 Conta criada!', `Bem-vindo ${formData.nome}! Faça login para começar.`, 'success', 'fa-check-circle')
       
       setTimeout(() => {
         navigate('/login')
       }, 1500)
-      
-    } catch (error) {
-      console.error('Erro ao salvar usuário:', error)
-      setError('Erro ao realizar cadastro. Tente novamente.')
+    } else {
+      console.error('Erro detalhado:', result.error)
+      setError(result.error || 'Erro ao realizar cadastro. Tente novamente.')
     }
+    
+    setLoading(false)
   }
 
   return (
@@ -131,6 +125,7 @@ function Cadastro() {
                   onChange={handleChange}
                   placeholder="Nome completo"
                   className="cadastro-input-field"
+                  disabled={loading}
                 />
               </div>
 
@@ -142,6 +137,7 @@ function Cadastro() {
                   onChange={handleChange}
                   placeholder="E-mail"
                   className="cadastro-input-field"
+                  disabled={loading}
                 />
               </div>
 
@@ -153,6 +149,7 @@ function Cadastro() {
                   onChange={handleChange}
                   placeholder="Senha (mínimo 6 caracteres)"
                   className="cadastro-input-field"
+                  disabled={loading}
                 />
               </div>
 
@@ -164,13 +161,14 @@ function Cadastro() {
                   onChange={handleChange}
                   placeholder="Confirmar senha"
                   className="cadastro-input-field"
+                  disabled={loading}
                 />
               </div>
 
               {error && <div className="cadastro-error-msg">{error}</div>}
 
-              <button type="submit" className="cadastro-btn-submit">
-                Cadastrar
+              <button type="submit" className="cadastro-btn-submit" disabled={loading}>
+                {loading ? 'Cadastrando...' : 'Cadastrar'}
               </button>
             </form>
 

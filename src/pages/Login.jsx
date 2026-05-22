@@ -15,6 +15,7 @@ function Login() {
     senha: ''
   })
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -25,7 +26,7 @@ function Login() {
     setError('')
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
 
     if (!credentials.email || !credentials.senha) {
@@ -33,22 +34,18 @@ function Login() {
       return
     }
 
-    const usuarios = [
-      { email: "vitor@forza.com", senha: "123456", nome: "Vitor Vaz", avatar: "/img/usuarios/vitor_vaz.jpg" },
-      { email: "giovanni@forza.com", senha: "123456", nome: "Giovanni Borsoi", avatar: "/img/usuarios/giovanni_borsoi.jpg" },
-      { email: "gabriel@forza.com", senha: "123456", nome: "Gabriel Bastos", avatar: "/img/usuarios/gabriel.png" },
-      { email: "henrique@forza.com", senha: "123456", nome: "Henrique Santosz", avatar: "/img/usuarios/henrique_santosz.jpg" }
-    ]
-
-    const usuarioEncontrado = usuarios.find(u => u.email === credentials.email && u.senha === credentials.senha)
-
-    if (usuarioEncontrado) {
-      login(usuarioEncontrado)
-      addNotification('👋 Bem-vindo!', `Olá ${usuarioEncontrado.nome}! Seja bem-vindo ao Forza.`, 'success', 'fa-hand-peace')
+    setLoading(true)
+    
+    const result = await login(credentials.email, credentials.senha)
+    
+    if (result.success) {
+      addNotification('👋 Bem-vindo!', `Olá ${result.user.nome}! Seja bem-vindo ao Forza.`, 'success', 'fa-hand-peace')
       navigate('/painel')
     } else {
-      setError('Email ou senha incorretos!')
+      setError(result.error || 'Email ou senha incorretos!')
     }
+    
+    setLoading(false)
   }
 
   return (
@@ -100,6 +97,7 @@ function Login() {
                   onChange={handleChange}
                   placeholder="E-mail"
                   className="input-field"
+                  disabled={loading}
                 />
               </div>
 
@@ -111,13 +109,14 @@ function Login() {
                   onChange={handleChange}
                   placeholder="Senha"
                   className="input-field"
+                  disabled={loading}
                 />
               </div>
 
               {error && <div className="error-msg">{error}</div>}
 
-              <button type="submit" className="btn-login">
-                Entrar
+              <button type="submit" className="btn-login" disabled={loading}>
+                {loading ? 'Entrando...' : 'Entrar'}
               </button>
             </form>
 
