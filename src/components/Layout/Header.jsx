@@ -1,12 +1,14 @@
 import React from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useTheme } from '../../contexts/ThemeContext'
+import { useAuth } from '../../contexts/AuthContext'  // ← ADICIONADO
 import NotificationBell from '../Common/NotificationBell'
 
 const Header = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { theme, toggleTheme } = useTheme()
+  const { user } = useAuth()  // ← ADICIONADO
 
   // APENAS a página Sobre Nós deve ser diferente
   const isSobreNosPage = location.pathname === '/' || location.pathname === '/sobre-nos'
@@ -52,8 +54,8 @@ const Header = () => {
             <i className={`fas ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}`}></i>
           </button>
           <img 
-            src="/img/usuarios/vitor_vaz.jpg" 
-            alt="Perfil" 
+            src={user?.avatar || '/img/usuarios/default.jpg'}  // ← ALTERADO (dinâmico)
+            alt={user?.nome || 'Perfil'}                       // ← ALTERADO
             className="header-profile"
             onClick={() => navigate('/perfil')}
             onError={(e) => { e.target.src = '/img/profile.jpg.png' }}
@@ -63,7 +65,7 @@ const Header = () => {
 
       {/* Para páginas de login/cadastro - não mostrar nada além do logo */}
       {isAuthPage && (
-        <div style={{ width: '100px' }}></div> // placeholder para manter o layout
+        <div style={{ width: '100px' }}></div>
       )}
 
       <style jsx>{`

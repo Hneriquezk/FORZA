@@ -2,168 +2,348 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useNotifications } from '../contexts/NotificationContext'
+import { supabase } from '../lib/supabase'
 import Header from '../components/Layout/Header'
 import Footer from '../components/Layout/Footer'
 import './painel.css'
 
 function Painel() {
   const navigate = useNavigate()
-  const { isAuthenticated, user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { addNotification } = useNotifications()
   const [loading, setLoading] = useState(true)
-  const [curtidas, setCurtidas] = useState({})
-  const [comentarios, setComentarios] = useState({})
-  const [comentariosVisiveis, setComentariosVisiveis] = useState({})
-  
-  // Estado para controlar quem o usuário está seguindo
+  const [feedPosts, setFeedPosts] = useState([])
+  const [sugestoes, setSugestoes] = useState([])
   const [seguindo, setSeguindo] = useState({})
+  const [likedPosts, setLikedPosts] = useState({})
+  const [comentariosVisiveis, setComentariosVisiveis] = useState({})
+  const [comentarios, setComentarios] = useState({})
+  const [clubesUsuario, setClubesUsuario] = useState([])
 
-  // Dados dos posts
-  const postsData = [
-    {
-      id: 1,
-      usuario: "Valmir Borsoi",
-      avatar: "/img/usuarios/avatar_walmir.png",
-      data: "29 de jan. de 2026, 07:30",
-      local: "Vitória, ES, Brazil",
-      atividade: "Corrida Matinal em Jardim Camburi",
-      icone: "/img/corrida_icon.png",
-      metricas: [
-        { label: "Distância", valor: "5.0 km" },
-        { label: "Tempo", valor: "00:31:06" },
-        { label: "Ritmo Média", valor: "6:12/km" }
-      ],
-      imagens: ["/img/atividades/atividade_walmir.png", "/img/atividades/Jardim_Camburi.png"]
-    },
-    {
-      id: 2,
-      usuario: "Henrique Avancini",
-      avatar: "/img/usuarios/avatar_avancini.png",
-      data: "1 de março de 2026, 13:02",
-      local: "Gasabo District, Ruanda",
-      atividade: "Stage 8 - Tour Du Rwanda",
-      icone: "/img/bike_icon.png",
-      metricas: [
-        { label: "Distância", valor: "80,99 km" },
-        { label: "Tempo", valor: "01:59:23" },
-        { label: "Ganho de elev.", valor: "1.663m" }
-      ],
-      imagens: ["/img/atividades/atividade_avancini.png", "/img/atividades/Rwanda.png"]
-    },
-    {
-      id: 3,
-      usuario: "Matheus Januario",
-      avatar: "/img/usuarios/avatar_matheus.png",
-      data: "5 de janeiro de 2026, 21:02",
-      local: "Galo Branco, São José dos Campos",
-      atividade: "Corrida Matinal 5km",
-      icone: "/img/corrida_icon.png",
-      metricas: [
-        { label: "Distância", valor: "5,04 km" },
-        { label: "Tempo", valor: "28:30:05" },
-        { label: "Ritmo médio", valor: "5:04 min" }
-      ],
-      imagens: ["/img/atividades/atividade_matheus.png", "/img/atividades/ciclismo_januario.png"]
-    },
-    {
-      id: 4,
-      usuario: "Adriano Cruz",
-      avatar: "/img/usuarios/avatar_adriano.png",
-      data: "5 de julho de 2025, 1:23",
-      local: "Santa María de Jesús, Guatemala",
-      atividade: "Santa María de Jesús - Volcán de Agua",
-      icone: "/img/bike_icon.png",
-      metricas: [
-        { label: "Distância", valor: "11,25 km" },
-        { label: "Tempo", valor: "4:17:18" },
-        { label: "Ganho de elev.", valor: "1.674 m" }
-      ],
-      imagens: ["/img/atividades/atividade_adriano.png", "/img/atividades/foto_atividadeadriano.png"]
-    }
-  ]
+  // Estatísticas do usuário
+  const [stats, setStats] = useState({
+    calorias: 1250,
+    elevacao: 2340,
+    distancia: 55.9,
+    meta: 60
+  })
 
-  // Lista de amigos sugeridos
-  const amigosSugeridos = [
-    { id: 1, nome: "Henrique Santosz", localizacao: "São José dos Campos, SP, Brasil", avatar: "/img/usuarios/henrique_santosz.jpg" },
-    { id: 2, nome: "Giovanni Borsoli", localizacao: "Caçapava, SP, Brasil", avatar: "/img/usuarios/giovanni_borsoi.jpg" },
-    { id: 3, nome: "Gabriel Bastos", localizacao: "Caçapava, SP, Brasil", avatar: "/img/usuarios/gabriel.png" },
-    { id: 4, nome: "Nino Schurter", localizacao: "Chur, GR, Suíça", avatar: "/img/usuarios/nino.png", verified: true }
-  ]
-
+  // ==================== VERIFICAR AUTENTICAÇÃO ====================
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login')
+    console.log('🔍 [Painel] authLoading:', authLoading)
+    console.log('🔍 [Painel] user:', user)
+    
+    if (!authLoading) {
+      if (!user) {
+        console.log('⚠️ [Painel] Usuário não autenticado, redirecionando para login')
+        navigate('/login')
+      } else {
+        console.log('✅ [Painel] Usuário autenticado:', user.nome)
+      }
+    }
+  }, [user, authLoading, navigate])
+
+  // ==================== CARREGAR CLUBES DO USUÁRIO ====================
+  const carregarClubesDoUsuario = async () => {
+    if (!user) return
+    
+    try {
+      console.log('🔄 [Painel] Carregando clubes do usuário...')
+      
+      const { data, error } = await supabase
+        .from('clubes_membros')
+        .select(`
+          clube_id,
+          clubes (id, nome, logo, membros_total)
+        `)
+        .eq('usuario_id', user.id)
+        .limit(3)
+      
+      if (error) throw error
+      
+      if (data && data.length > 0) {
+        const clubesFormatados = data.map(item => ({
+          id: item.clubes.id,
+          nome: item.clubes.nome,
+          logo: item.clubes.logo || '/img/clube_default.jpg',
+          membros: item.clubes.membros_total || 0
+        }))
+        setClubesUsuario(clubesFormatados)
+        console.log('✅ [Painel] Clubes carregados:', clubesFormatados.length)
+      } else {
+        setClubesUsuario([])
+        console.log('⚠️ [Painel] Usuário não participa de nenhum clube')
+      }
+    } catch (error) {
+      console.error('❌ [Painel] Erro ao carregar clubes:', error)
+      setClubesUsuario([])
+    }
+  }
+
+  // ==================== ESCUTAR MUDANÇAS NOS CLUBES DO USUÁRIO ====================
+  useEffect(() => {
+    if (!user) return
+    
+    console.log('🔄 [Painel] Inscrevendo para mudanças nos clubes...')
+    
+    const clubesSubscription = supabase
+      .channel('clubes_membros_channel')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'clubes_membros',
+        filter: `usuario_id=eq.${user.id}`
+      }, (payload) => {
+        console.log('📢 [Painel] Mudança detectada nos clubes do usuário:', payload)
+        // Recarregar os clubes quando houver mudança (entrar/sair de clube)
+        carregarClubesDoUsuario()
+      })
+      .subscribe()
+    
+    return () => {
+      console.log('🔴 [Painel] Removendo inscrição de clubes')
+      clubesSubscription.unsubscribe()
+    }
+  }, [user])
+
+  // ==================== CARREGAR FEED ====================
+  const carregarFeed = async () => {
+    if (!user) return
+    
+    try {
+      console.log('🔄 [Painel] Carregando feed para usuário:', user.id)
+      
+      const { data: atividades, error } = await supabase
+        .from('atividades')
+        .select(`
+          *,
+          usuarios (id, nome, avatar)
+        `)
+        .neq('usuario_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50)
+      
+      if (error) throw error
+      
+      console.log('📊 [Painel] Atividades encontradas:', atividades?.length || 0)
+      
+      const { data: curtidasData } = await supabase
+        .from('curtidas')
+        .select('atividade_id')
+        .eq('usuario_id', user.id)
+      
+      const likedMap = {}
+      curtidasData?.forEach(item => { likedMap[item.atividade_id] = true })
+      setLikedPosts(likedMap)
+      
+      const comentariosMap = {}
+      for (const atividade of atividades || []) {
+        const { data: comentariosData } = await supabase
+          .from('comentarios')
+          .select(`
+            *,
+            usuarios (id, nome, avatar)
+          `)
+          .eq('atividade_id', atividade.id)
+          .order('created_at', { ascending: true })
+        
+        if (comentariosData) {
+          comentariosMap[atividade.id] = comentariosData.map(c => ({
+            id: c.id,
+            usuario: c.usuarios?.nome || 'Usuário',
+            avatar: c.usuarios?.avatar || '/img/usuarios/default.jpg',
+            texto: c.texto,
+            data: new Date(c.created_at).toLocaleString()
+          }))
+        } else {
+          comentariosMap[atividade.id] = []
+        }
+      }
+      setComentarios(comentariosMap)
+      
+      const formattedPosts = atividades?.map(atividade => {
+        let icone = 'fa-person-running'
+        if (atividade.tipo === 'Ciclismo') icone = 'fa-bicycle'
+        else if (atividade.tipo === 'Natação') icone = 'fa-person-swimming'
+        else if (atividade.tipo === 'Treino Funcional') icone = 'fa-dumbbell'
+        else if (atividade.tipo === 'Musculação') icone = 'fa-dumbbell'
+        else if (atividade.tipo === 'Trilha') icone = 'fa-hiking'
+        
+        return {
+          id: atividade.id,
+          usuarioId: atividade.usuario_id,
+          usuario: atividade.usuarios?.nome || 'Usuário',
+          avatar: atividade.usuarios?.avatar || '/img/usuarios/default.jpg',
+          data: new Date(atividade.created_at).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }),
+          local: atividade.local || 'Local não informado',
+          atividade: atividade.tipo || 'Atividade',
+          icone: icone,
+          metricas: [
+            { label: "Distância", valor: atividade.distancia || "0 km" },
+            { label: "Tempo", valor: atividade.tempo || "00:00" },
+            { label: "Ritmo", valor: atividade.pace || "0:00/km" }
+          ],
+          imagens: atividade.imagens && atividade.imagens.length > 0 ? atividade.imagens : ["/img/atividade_perfil.jpg"],
+          curtidas: atividade.curtidas || 0
+        }
+      }) || []
+      
+      setFeedPosts(formattedPosts)
+    } catch (error) {
+      console.error('❌ [Painel] Erro ao carregar feed:', error)
+    }
+  }
+
+  // ==================== CARREGAR SUGESTÕES DE AMIGOS ====================
+  const carregarSugestoes = async () => {
+    if (!user) return
+    
+    try {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('id, nome, email, avatar, localizacao')
+        .neq('id', user.id)
+        .limit(10)
+      
+      if (error) throw error
+      
+      const { data: seguindoData } = await supabase
+        .from('seguidores')
+        .select('seguindo_id')
+        .eq('seguidor_id', user.id)
+      
+      const seguindoIds = new Set(seguindoData?.map(s => s.seguindo_id) || [])
+      
+      const sugestoesFormatadas = data.map(usuario => ({
+        id: usuario.id,
+        nome: usuario.nome,
+        localizacao: usuario.localizacao || 'Local não informado',
+        avatar: usuario.avatar || '/img/usuarios/default.jpg',
+        seguindo: seguindoIds.has(usuario.id)
+      }))
+      
+      setSugestoes(sugestoesFormatadas)
+      
+      const seguindoState = {}
+      sugestoesFormatadas.forEach(s => {
+        seguindoState[s.id] = s.seguindo
+      })
+      setSeguindo(seguindoState)
+      
+    } catch (error) {
+      console.error('Erro ao carregar sugestões:', error)
+    }
+  }
+
+  // ==================== FUNÇÃO PARA SEGUIR USUÁRIO ====================
+  const handleSeguir = async (usuarioId, usuarioNome) => {
+    try {
+      if (seguindo[usuarioId]) {
+        const { error } = await supabase
+          .from('seguidores')
+          .delete()
+          .eq('seguidor_id', user?.id)
+          .eq('seguindo_id', usuarioId)
+        
+        if (error) throw error
+        
+        setSeguindo(prev => ({ ...prev, [usuarioId]: false }))
+        addNotification('➖ Deixou de seguir', `Você deixou de seguir ${usuarioNome}`, 'info', 'fa-user-minus')
+      } else {
+        const { error } = await supabase
+          .from('seguidores')
+          .insert([{ seguidor_id: user?.id, seguindo_id: usuarioId }])
+        
+        if (error) throw error
+        
+        setSeguindo(prev => ({ ...prev, [usuarioId]: true }))
+        addNotification('➕ Seguindo', `Você começou a seguir ${usuarioNome}`, 'success', 'fa-user-plus')
+      }
+    } catch (error) {
+      console.error('Erro ao seguir/deixar de seguir:', error)
+      addNotification('Erro', 'Não foi possível completar a ação', 'error')
+    }
+  }
+
+  // ==================== CURTIR POST ====================
+  const handleCurtir = async (postId, postUsuarioId, postUsuarioNome) => {
+    if (likedPosts[postId]) {
+      addNotification('Curtida', 'Você já curtiu este post!', 'warning')
       return
     }
     
-    // Carregar estado de seguir do localStorage
-    const savedSeguindo = localStorage.getItem('forza_seguindo')
-    if (savedSeguindo) {
-      setSeguindo(JSON.parse(savedSeguindo))
-    } else {
-      // Inicializar todos como não seguindo
-      const initialSeguindo = {}
-      amigosSugeridos.forEach(amigo => {
-        initialSeguindo[amigo.id] = false
-      })
-      setSeguindo(initialSeguindo)
-    }
-    
-    // Inicializar estados dos posts
-    const curtidasIniciais = {}
-    const comentariosIniciais = {}
-    postsData.forEach(post => {
-      curtidasIniciais[post.id] = false
-      comentariosIniciais[post.id] = []
-    })
-    setCurtidas(curtidasIniciais)
-    setComentarios(comentariosIniciais)
-    
-    setLoading(false)
-  }, [isAuthenticated, navigate])
-
-  // Função para seguir/deixar de seguir
-  const handleSeguir = (amigoId, amigoNome) => {
-    setSeguindo(prev => {
-      const novoEstado = !prev[amigoId]
-      const novaLista = { ...prev, [amigoId]: novoEstado }
+    try {
+      const { error } = await supabase.from('curtidas').insert([{ 
+        atividade_id: postId, 
+        usuario_id: user?.id 
+      }])
       
-      // Salvar no localStorage
-      localStorage.setItem('forza_seguindo', JSON.stringify(novaLista))
+      if (error) throw error
       
-      // Mostrar notificação
-      if (novoEstado) {
-        addNotification('➕ Seguindo', `Você começou a seguir ${amigoNome}`, 'success', 'fa-user-plus')
+      await supabase.rpc('incrementar_curtida', { post_id: postId })
+      
+      setFeedPosts(feedPosts.map(post => 
+        post.id === postId ? { ...post, curtidas: (post.curtidas || 0) + 1 } : post
+      ))
+      setLikedPosts({ ...likedPosts, [postId]: true })
+      
+      if (postUsuarioId !== user.id) {
+        addNotification('❤️ Curtida!', `Você curtiu o post de ${postUsuarioNome}`, 'info', 'fa-heart')
       } else {
-        addNotification('➖ Deixou de seguir', `Você deixou de seguir ${amigoNome}`, 'info', 'fa-user-minus')
+        addNotification('❤️ Curtida!', 'Você curtiu esta atividade!', 'info', 'fa-heart')
+      }
+    } catch (error) {
+      console.error('Erro ao curtir:', error)
+      addNotification('Erro', 'Não foi possível curtir', 'error')
+    }
+  }
+
+  // ==================== COMENTAR ====================
+  const handleAdicionarComentario = async (postId, postUsuarioId, postUsuarioNome, texto) => {
+    if (!texto.trim()) return
+    
+    try {
+      const { error } = await supabase.from('comentarios').insert([{
+        atividade_id: postId,
+        usuario_id: user?.id,
+        texto: texto
+      }])
+      
+      if (error) throw error
+      
+      const { data: novoComentario } = await supabase
+        .from('comentarios')
+        .select(`
+          *,
+          usuarios (id, nome, avatar)
+        `)
+        .eq('atividade_id', postId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+      
+      if (novoComentario && novoComentario[0]) {
+        const comentarioFormatado = {
+          id: novoComentario[0].id,
+          usuario: novoComentario[0].usuarios?.nome || user?.nome,
+          avatar: novoComentario[0].usuarios?.avatar || '/img/usuarios/default.jpg',
+          texto: novoComentario[0].texto,
+          data: new Date(novoComentario[0].created_at).toLocaleString()
+        }
+        
+        setComentarios(prev => ({
+          ...prev,
+          [postId]: [...(prev[postId] || []), comentarioFormatado]
+        }))
       }
       
-      return novaLista
-    })
-  }
-
-  const handleCurtir = (postId) => {
-    setCurtidas(prev => {
-      const novaCurtida = !prev[postId]
-      if (novaCurtida) {
-        addNotification('❤️ Curtida', `Você curtiu o post de ${postsData.find(p => p.id === postId)?.usuario}`, 'info', 'fa-heart')
+      if (postUsuarioId !== user.id) {
+        addNotification('💬 Comentário!', `Você comentou no post de ${postUsuarioNome}`, 'success', 'fa-comment')
+      } else {
+        addNotification('💬 Comentário!', 'Seu comentário foi publicado!', 'success', 'fa-comment')
       }
-      return { ...prev, [postId]: novaCurtida }
-    })
-  }
-
-  const handleComentario = (postId, texto) => {
-    if (texto.trim()) {
-      const novoComentario = {
-        usuario: user?.nome || "Você",
-        texto: texto,
-        tempo: "Agora mesmo"
-      }
-      setComentarios(prev => ({
-        ...prev,
-        [postId]: [...(prev[postId] || []), novoComentario]
-      }))
-      addNotification('💬 Comentário', `Você comentou no post de ${postsData.find(p => p.id === postId)?.usuario}`, 'info', 'fa-comment')
+    } catch (error) {
+      console.error('Erro ao comentar:', error)
+      addNotification('Erro', 'Não foi possível comentar', 'error')
     }
   }
 
@@ -172,6 +352,103 @@ function Painel() {
       ...prev,
       [postId]: !prev[postId]
     }))
+  }
+
+  // ==================== ESCUTAR MUDANÇAS EM TEMPO REAL ====================
+  useEffect(() => {
+    if (!user) return
+    
+    const atividadesSubscription = supabase
+      .channel('atividades_channel')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'atividades' 
+      }, (payload) => {
+        if (payload.new.usuario_id !== user?.id) {
+          carregarFeed()
+          supabase
+            .from('usuarios')
+            .select('nome')
+            .eq('id', payload.new.usuario_id)
+            .single()
+            .then(({ data }) => {
+              if (data) {
+                addNotification('📱 Nova atividade!', `${data.nome} publicou uma nova atividade!`, 'info', 'fa-bell')
+              }
+            })
+        }
+      })
+      .subscribe()
+    
+    const curtidasSubscription = supabase
+      .channel('curtidas_channel')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'curtidas' 
+      }, (payload) => {
+        if (payload.new.usuario_id !== user?.id) {
+          carregarFeed()
+        }
+      })
+      .subscribe()
+    
+    const comentariosSubscription = supabase
+      .channel('comentarios_channel')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'comentarios' 
+      }, (payload) => {
+        if (payload.new.usuario_id !== user?.id) {
+          carregarFeed()
+        }
+      })
+      .subscribe()
+    
+    return () => {
+      atividadesSubscription.unsubscribe()
+      curtidasSubscription.unsubscribe()
+      comentariosSubscription.unsubscribe()
+    }
+  }, [user])
+
+  // ==================== LOADING INICIAL ====================
+  useEffect(() => {
+    const loadData = async () => {
+      console.log('🔄 [Painel] Carregando dados iniciais...')
+      setLoading(true)
+      await Promise.all([
+        carregarFeed(),
+        carregarSugestoes(),
+        carregarClubesDoUsuario()
+      ])
+      setLoading(false)
+      console.log('✅ [Painel] Dados carregados com sucesso!')
+    }
+    
+    if (user && !authLoading) {
+      loadData()
+    }
+  }, [user, authLoading])
+
+  // Mostrar loading enquanto verifica autenticação
+  if (authLoading) {
+    return (
+      <>
+        <Header />
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Verificando autenticação...</p>
+        </div>
+        <Footer />
+      </>
+    )
+  }
+
+  if (!user) {
+    return null
   }
 
   if (loading) {
@@ -230,7 +507,7 @@ function Painel() {
             <div className="stat-icon flame"><i className="fa-solid fa-fire"></i></div>
             <div>
               <div className="stat-label">Calorias</div>
-              <div className="stat-value">1250</div>
+              <div className="stat-value">{stats.calorias}</div>
               <div style={{ fontSize: '10px', color: 'var(--text-light)' }}>kcal de hoje</div>
             </div>
           </div>
@@ -238,7 +515,7 @@ function Painel() {
             <div className="stat-icon blue"><i className="fa-solid fa-arrow-trend-up"></i></div>
             <div>
               <div className="stat-label">Elevação Mensal</div>
-              <div className="stat-value">2340m</div>
+              <div className="stat-value">{stats.elevacao}m</div>
               <div style={{ fontSize: '10px', color: 'var(--text-light)' }}>430m acima da média</div>
             </div>
           </div>
@@ -246,7 +523,7 @@ function Painel() {
             <div className="stat-icon green"><i className="fa-solid fa-route"></i></div>
             <div>
               <div className="stat-label">Distância Mensal</div>
-              <div className="stat-value">55.9 km</div>
+              <div className="stat-value">{stats.distancia} km</div>
               <div style={{ fontSize: '10px', color: 'var(--text-light)' }}>230 km acima da média</div>
             </div>
           </div>
@@ -254,9 +531,9 @@ function Painel() {
             <div className="stat-icon gray"><i className="fa-solid fa-trophy"></i></div>
             <div>
               <div className="stat-label">Meta Semanal</div>
-              <div className="stat-value">3 <span style={{ fontSize: '11px', fontWeight: '400' }}>/ 5 treinos</span></div>
+              <div className="stat-value">{stats.meta}%</div>
               <div className="progress-small">
-                <div style={{ width: '60%', height: '100%', background: '#ff1e2d', borderRadius: '4px' }}></div>
+                <div style={{ width: `${stats.meta}%`, height: '100%', background: '#ff1e2d', borderRadius: '4px' }}></div>
               </div>
             </div>
           </div>
@@ -266,217 +543,298 @@ function Painel() {
         <div className="dashboard">
           {/* Feed */}
           <div className="feed">
-            {postsData.map(post => (
-              <div key={post.id} className="feed-card">
-                <div className="feed-header">
-                  <img src={post.avatar} className="feed-avatar" alt={post.usuario} />
-                  <div className="feed-user-info">
-                    <div className="feed-user-name">{post.usuario}</div>
-                    <div className="feed-meta">
-                      <span>{post.data}</span><span>•</span>
-                      <i className="fa-solid fa-location-dot"></i>
-                      <span>{post.local}</span>
+            
+            {feedPosts.length > 0 ? (
+              feedPosts.map(post => (
+                <div key={post.id} className="feed-card">
+                  <div className="feed-header">
+                    <img 
+                      src={post.avatar} 
+                      className="feed-avatar" 
+                      alt={post.usuario}
+                      onError={(e) => { e.target.src = '/img/usuarios/default.jpg' }}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/perfil/${post.usuarioId}`)}
+                    />
+                    <div className="feed-user-info">
+                      <div 
+                        className="feed-user-name" 
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => navigate(`/perfil/${post.usuarioId}`)}
+                      >
+                        {post.usuario}
+                      </div>
+                      <div className="feed-meta">
+                        <span>{post.data}</span><span>•</span>
+                        <i className="fa-solid fa-location-dot"></i>
+                        <span>{post.local}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="feed-activity-title">
-                  <img src={post.icone} style={{ width: '20px' }} alt="" />
-                  {post.atividade}
-                </div>
-                <div className="feed-metrics">
-                  {post.metricas.map((m, idx) => (
-                    <div key={idx} className="feed-metric">
-                      <div className="feed-metric-label">{m.label}</div>
-                      <div className="feed-metric-value">{m.valor}</div>
-                    </div>
-                  ))}
-                </div>
-                <div className="feed-images">
-                  <div className="image-grid">
-                    {post.imagens.map((img, idx) => (
-                      <img key={idx} src={img} alt={`Atividade ${idx + 1}`} />
+                  <div className="feed-activity-title">
+                    <i className={`fas ${post.icone}`}></i>
+                    <span>{post.atividade}</span>
+                  </div>
+                  <div className="feed-metrics">
+                    {post.metricas.map((m, idx) => (
+                      <div key={idx} className="feed-metric">
+                        <div className="feed-metric-label">{m.label}</div>
+                        <div className="feed-metric-value">{m.valor}</div>
+                      </div>
                     ))}
                   </div>
-                </div>
-                <div className="feed-actions">
-                  <button className={`action-btn ${curtidas[post.id] ? 'active' : ''}`} onClick={() => handleCurtir(post.id)}>
-                    <i className={curtidas[post.id] ? 'fas fa-heart' : 'far fa-heart'}></i>
-                    <span>{curtidas[post.id] ? '1' : '0'}</span>
-                  </button>
-                  <button className="action-btn" onClick={() => toggleComentarios(post.id)}>
-                    <i className="far fa-comment"></i>
-                    <span>{comentarios[post.id]?.length || 0}</span>
-                  </button>
-                  <button className="action-btn">
-                    <i className="fa-regular fa-share-square"></i>
-                  </button>
-                </div>
-                
-                {/* Área de comentários */}
-                {comentariosVisiveis[post.id] && (
-                  <div className="comentarios-area" style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
-                    <div className="comentarios-lista" style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '12px' }}>
-                      {comentarios[post.id]?.map((com, idx) => (
-                        <div key={idx} style={{ padding: '8px', borderBottom: '1px solid var(--border-color)' }}>
-                          <strong style={{ color: 'var(--text-primary)' }}>{com.usuario}</strong>
-                          <p style={{ fontSize: '12px', margin: '4px 0', color: 'var(--text-secondary)' }}>{com.texto}</p>
-                          <small style={{ fontSize: '10px', color: 'var(--text-light)' }}>{com.tempo}</small>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="comment-row" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <div className="comment-avatar" style={{ width: '32px', height: '32px', background: '#ff1e2d', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <i className="fa-solid fa-user" style={{ color: 'white', fontSize: '12px' }}></i>
-                      </div>
-                      <input 
-                        type="text" 
-                        className="comment-input" 
-                        id={`input-coment-${post.id}`}
-                        placeholder="Escreva um comentário..." 
-                        style={{ flex: 1, padding: '8px 14px', border: '1px solid var(--border-color)', borderRadius: '20px', background: 'var(--input-bg)', color: 'var(--text-primary)' }}
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter') {
-                            handleComentario(post.id, e.target.value)
-                            e.target.value = ''
-                          }
-                        }}
-                      />
-                      <button 
-                        className="comment-send" 
-                        style={{ width: '32px', height: '32px', background: '#ff1e2d', border: 'none', borderRadius: '50%', color: 'white', cursor: 'pointer' }}
-                        onClick={(e) => {
-                          const input = document.getElementById(`input-coment-${post.id}`)
-                          handleComentario(post.id, input.value)
-                          input.value = ''
-                        }}
-                      >
-                        <i className="fa-solid fa-paper-plane" style={{ fontSize: '12px' }}></i>
-                      </button>
+                  
+                  <div className="feed-images">
+                    <div className="image-grid">
+                      {post.imagens && post.imagens.length > 0 ? (
+                        post.imagens.map((img, idx) => (
+                          <img 
+                            key={idx} 
+                            src={img} 
+                            alt={`Atividade ${idx + 1}`} 
+                            onError={(e) => { 
+                              e.target.src = '/img/atividade_perfil.jpg'
+                            }} 
+                          />
+                        ))
+                      ) : (
+                        <img 
+                          src="/img/atividade_perfil.jpg" 
+                          alt="Atividade" 
+                          onError={(e) => { 
+                            e.target.src = '/img/atividade_perfil.jpg'
+                          }} 
+                        />
+                      )}
                     </div>
                   </div>
-                )}
+                  
+                  <div className="feed-actions">
+                    <button 
+                      className={`action-btn ${likedPosts[post.id] ? 'active' : ''}`} 
+                      onClick={() => handleCurtir(post.id, post.usuarioId, post.usuario)}
+                    >
+                      <i className={likedPosts[post.id] ? 'fas fa-heart' : 'far fa-heart'}></i>
+                      <span>{post.curtidas || 0}</span>
+                    </button>
+                    <button className="action-btn" onClick={() => toggleComentarios(post.id)}>
+                      <i className="far fa-comment"></i>
+                      <span>{comentarios[post.id]?.length || 0}</span>
+                    </button>
+                    <button className="action-btn">
+                      <i className="fa-regular fa-share-square"></i>
+                    </button>
+                  </div>
+                  
+                  {comentariosVisiveis[post.id] && (
+                    <div className="comentarios-area">
+                      <div className="comentarios-lista">
+                        {comentarios[post.id]?.map((com, idx) => (
+                          <div key={idx} className="comentario-item">
+                            <img 
+                              src={com.avatar} 
+                              alt={com.usuario} 
+                              onError={(e) => { e.target.src = '/img/usuarios/default.jpg' }}
+                            />
+                            <div className="comentario-content">
+                              <strong>{com.usuario}</strong>
+                              <p>{com.texto}</p>
+                              <small>{com.data}</small>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="comment-row">
+                        <div className="comment-avatar">
+                          <img 
+                            src={user?.avatar || '/img/usuarios/default.jpg'} 
+                            alt={user?.nome}
+                            onError={(e) => { e.target.src = '/img/usuarios/default.jpg' }}
+                          />
+                        </div>
+                        <input 
+                          type="text" 
+                          className="comment-input" 
+                          id={`input-coment-${post.id}`}
+                          placeholder="Escreva um comentário..." 
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              handleAdicionarComentario(post.id, post.usuarioId, post.usuario, e.target.value)
+                              e.target.value = ''
+                            }
+                          }}
+                        />
+                        <button 
+                          className="comment-send"
+                          onClick={() => {
+                            const input = document.getElementById(`input-coment-${post.id}`)
+                            handleAdicionarComentario(post.id, post.usuarioId, post.usuario, input.value)
+                            input.value = ''
+                          }}
+                        >
+                          <i className="fa-solid fa-paper-plane"></i>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="empty-feed">
+                <i className="fas fa-newspaper"></i>
+                <h3>Nenhuma atividade de outros usuários</h3>
+                <p>Quando outros usuários publicarem atividades, aparecerão aqui!</p>
               </div>
-            ))}
+            )}
           </div>
 
           {/* Right Panel */}
           <div className="right-panel">
             {/* Desafios Ativos */}
-            <div className="rcard" style={{ background: 'var(--bg-card)', borderRadius: '20px', padding: '20px', marginBottom: '24px', border: '1px solid var(--border-color)' }}>
-              <div className="rcard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <span className="rcard-title" style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>Desafios Ativos</span>
-                <Link to="/desafios" className="ver-todos" style={{ fontSize: '12px', color: '#ff1e2d', textDecoration: 'none' }}>Ver todos <i className="fa-solid fa-chevron-right"></i></Link>
+            <div className="rcard">
+              <div className="rcard-header">
+                <span className="rcard-title">Desafios Ativos</span>
+                <Link to="/desafios" className="ver-todos">Ver todos <i className="fa-solid fa-chevron-right"></i></Link>
               </div>
-              <div className="desafio-item" style={{ marginBottom: '20px' }}>
-                <div className="desafio-top" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                  <div className="desafio-icon orange" style={{ width: '36px', height: '36px', background: '#f59e0b20', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <i className="fa-solid fa-person-running" style={{ color: '#f59e0b' }}></i>
+              <div className="desafio-item">
+                <div className="desafio-top">
+                  <div className="desafio-icon orange">
+                    <i className="fa-solid fa-person-running"></i>
                   </div>
-                  <div className="desafio-name" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>100 quilômetros em Março</div>
+                  <div className="desafio-name">100 quilômetros em Março</div>
                 </div>
-                <div className="progress-bar" style={{ height: '6px', background: 'var(--progress-bg)', borderRadius: '10px', overflow: 'hidden', marginBottom: '8px' }}>
-                  <div className="progress-fill orange" style={{ width: '55%', height: '100%', background: '#f59e0b', borderRadius: '10px' }}></div>
+                <div className="progress-bar">
+                  <div className="progress-fill orange" style={{ width: '55%' }}></div>
                 </div>
-                <div className="desafio-progress-info" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                <div className="desafio-progress-info">
                   <span>55 Km</span><span>11 dias restantes</span>
                 </div>
               </div>
-              <div className="desafio-item" style={{ marginBottom: '20px' }}>
-                <div className="desafio-top" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                  <div className="desafio-icon red" style={{ width: '36px', height: '36px', background: '#ff1e2d20', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <i className="fa-solid fa-stopwatch" style={{ color: '#ff1e2d' }}></i>
+              <div className="desafio-item">
+                <div className="desafio-top">
+                  <div className="desafio-icon red">
+                    <i className="fa-solid fa-stopwatch"></i>
                   </div>
-                  <div className="desafio-name" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>1000 minutos em Março</div>
+                  <div className="desafio-name">1000 minutos em Março</div>
                 </div>
-                <div className="progress-bar" style={{ height: '6px', background: 'var(--progress-bg)', borderRadius: '10px', overflow: 'hidden', marginBottom: '8px' }}>
-                  <div className="progress-fill red" style={{ width: '70%', height: '100%', background: '#ff1e2d', borderRadius: '10px' }}></div>
+                <div className="progress-bar">
+                  <div className="progress-fill red" style={{ width: '70%' }}></div>
                 </div>
-                <div className="desafio-progress-info" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                <div className="desafio-progress-info">
                   <span>700 min</span><span>11 dias restantes</span>
                 </div>
               </div>
               <div className="desafio-item">
-                <div className="desafio-top" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                  <div className="desafio-icon green" style={{ width: '36px', height: '36px', background: '#10b98120', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <i className="fa-solid fa-route" style={{ color: '#10b981' }}></i>
+                <div className="desafio-top">
+                  <div className="desafio-icon green">
+                    <i className="fa-solid fa-route"></i>
                   </div>
-                  <div className="desafio-name" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>1000 quilômetros em Dezembro</div>
+                  <div className="desafio-name">1000 quilômetros em Dezembro</div>
                 </div>
-                <div className="progress-bar" style={{ height: '6px', background: 'var(--progress-bg)', borderRadius: '10px', overflow: 'hidden', marginBottom: '8px' }}>
-                  <div className="progress-fill green" style={{ width: '88%', height: '100%', background: '#10b981', borderRadius: '10px' }}></div>
+                <div className="progress-bar">
+                  <div className="progress-fill green" style={{ width: '88%' }}></div>
                 </div>
-                <div className="desafio-progress-info" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                <div className="desafio-progress-info">
                   <span>880 km</span><span>Completo</span>
                 </div>
               </div>
             </div>
 
-            {/* Clubes Participantes */}
-            <div className="rcard" style={{ background: 'var(--bg-card)', borderRadius: '20px', padding: '20px', marginBottom: '24px', border: '1px solid var(--border-color)' }}>
-              <div className="rcard-header" style={{ marginBottom: '16px' }}>
-                <span className="rcard-title" style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>Clubes Participantes</span>
+            {/* Clubes Participantes - Atualiza em tempo real */}
+            <div className="rcard">
+              <div className="rcard-header">
+                <span className="rcard-title">Clubes Participantes</span>
               </div>
-              <div className="clube-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }} onClick={() => navigate('/clubes')}>
-                <img src="/img/outros/corredores_sjc.png" className="profile_avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} alt="Clube" />
-                <div className="clube-info" style={{ flex: 1 }}>
-                  <div className="clube-name" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Corredores de São José e Região</div>
-                  <div className="clube-link" style={{ fontSize: '11px', color: '#ff1e2d', cursor: 'pointer' }}>Visualizar Clube →</div>
-                </div>
-              </div>
-              <div className="clube-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }} onClick={() => navigate('/clubes')}>
-                <img src="/img/outros/ciclotech.png" className="profile_avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} alt="Clube" />
-                <div className="clube-info" style={{ flex: 1 }}>
-                  <div className="clube-name" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Ciclotech <span className="verified" style={{ color: '#3b82f6' }}><i className="fa-solid fa-circle-check"></i></span></div>
-                  <div className="clube-link" style={{ fontSize: '11px', color: '#ff1e2d', cursor: 'pointer' }}>Visualizar Clube →</div>
-                </div>
-              </div>
-              <div className="clube-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', cursor: 'pointer' }} onClick={() => navigate('/clubes')}>
-                <img src="/img/forza icon.png" className="profile_avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} alt="Clube" />
-                <div className="clube-info" style={{ flex: 1 }}>
-                  <div className="clube-name" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>FORZA <span className="verified" style={{ color: '#3b82f6' }}><i className="fa-solid fa-circle-check"></i></span></div>
-                  <div className="clube-link" style={{ fontSize: '11px', color: '#ff1e2d', cursor: 'pointer' }}>Visualizar Clube →</div>
-                </div>
+              <div className="club-list">
+                {clubesUsuario.length > 0 ? (
+                  clubesUsuario.map(clube => (
+                    <div key={clube.id} className="club-item" onClick={() => navigate(`/clube/${clube.id}`)}>
+                      <div className="club-icon">
+                        <img 
+                          src={clube.logo} 
+                          alt={clube.nome}
+                          onError={(e) => { e.target.src = '/img/clube_default.jpg' }}
+                        />
+                      </div>
+                      <div className="club-info">
+                        <div className="club-name">{clube.nome}</div>
+                        <div className="club-meta">
+                          <i className="fa-solid fa-users"></i> {clube.membros} membros
+                        </div>
+                      </div>
+                      <i className="fas fa-chevron-right"></i>
+                    </div>
+                  ))
+                ) : (
+                  <div className="empty-clubes">
+                    <p>Você ainda não participa de nenhum clube</p>
+                    <button className="btn-ver-clubes" onClick={() => navigate('/clubes')}>
+                      Ver clubes
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Amigos Sugeridos - COM BOTÃO SEGUIR FUNCIONAL */}
-            <div className="rcard" style={{ background: 'var(--bg-card)', borderRadius: '20px', padding: '20px', border: '1px solid var(--border-color)' }}>
-              <div className="rcard-header" style={{ marginBottom: '16px' }}>
-                <span className="rcard-title" style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <i className="fa-solid fa-user-group" style={{ color: '#888', fontSize: '12px' }}></i> Amigos sugeridos
+            {/* Amigos Sugeridos */}
+            <div className="rcard">
+              <div className="rcard-header">
+                <span className="rcard-title">
+                  <i className="fa-solid fa-user-group"></i> Amigos sugeridos
                 </span>
               </div>
               
-              {amigosSugeridos.map(amigo => (
-                <div key={amigo.id} className="amigo-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
-                  <img src={amigo.avatar} className="profile_avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} alt={amigo.nome} />
-                  <div className="amigo-info" style={{ flex: 1 }}>
-                    <div className="amigo-name" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+              {sugestoes.map(amigo => (
+                <div key={amigo.id} className="amigo-item">
+                  <div 
+                    className="amigo-avatar"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      console.log('Navegando para perfil do amigo:', amigo.id, amigo.nome)
+                      navigate(`/perfil/${amigo.id}`)
+                    }}
+                  >
+                    <img 
+                      src={amigo.avatar} 
+                      alt={amigo.nome}
+                      onError={(e) => { e.target.src = '/img/usuarios/default.jpg' }}
+                    />
+                  </div>
+                  <div className="amigo-info">
+                    <div 
+                      className="amigo-name" 
+                      style={{ 
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        color: 'var(--text-primary)'
+                      }}
+                      onClick={() => {
+                        console.log('Navegando para perfil pelo nome:', amigo.id, amigo.nome)
+                        navigate(`/perfil/${amigo.id}`)
+                      }}
+                    >
                       {amigo.nome}
-                      {amigo.verified && <i className="fa-solid fa-circle-check" style={{ color: '#3b82f6', fontSize: '12px', marginLeft: '4px' }}></i>}
                     </div>
-                    <div className="amigo-location" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{amigo.localizacao}</div>
+                    <div className="amigo-location">
+                      <i className="fa-solid fa-location-dot"></i> {amigo.localizacao}
+                    </div>
                   </div>
                   <button 
                     className={`seguir-btn ${seguindo[amigo.id] ? 'seguindo' : ''}`}
                     onClick={() => handleSeguir(amigo.id, amigo.nome)}
-                    style={{ 
-                      background: seguindo[amigo.id] ? '#ff1e2d' : 'var(--border-light)',
-                      border: seguindo[amigo.id] ? 'none' : '1px solid var(--border-color)',
-                      padding: '6px 16px',
-                      borderRadius: '30px',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      color: seguindo[amigo.id] ? 'white' : 'var(--text-secondary)',
-                      transition: 'all 0.2s ease'
-                    }}
                   >
-                    <i className={seguindo[amigo.id] ? 'fas fa-check' : 'fas fa-user-plus'} style={{ marginRight: '6px', fontSize: '10px' }}></i>
+                    <i className={seguindo[amigo.id] ? 'fas fa-check' : 'fas fa-user-plus'}></i>
                     {seguindo[amigo.id] ? 'Seguindo' : 'Seguir'}
                   </button>
                 </div>
               ))}
+              
+              {sugestoes.length === 0 && (
+                <div className="empty-sugestoes">
+                  <i className="fa-solid fa-users"></i>
+                  <p>Nenhuma sugestão disponível</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
