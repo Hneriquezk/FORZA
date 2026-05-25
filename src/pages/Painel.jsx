@@ -9,7 +9,7 @@ import './painel.css'
 
 function Painel() {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { addNotification } = useNotifications()
   const [loading, setLoading] = useState(true)
   const [feedPosts, setFeedPosts] = useState([])
@@ -18,7 +18,8 @@ function Painel() {
   const [likedPosts, setLikedPosts] = useState({})
   const [comentariosVisiveis, setComentariosVisiveis] = useState({})
   const [comentarios, setComentarios] = useState({})
-  
+  const [clubesUsuario, setClubesUsuario] = useState([])
+
   // Estatísticas do usuário
   const [stats, setStats] = useState({
     calorias: 1250,
@@ -27,12 +28,90 @@ function Painel() {
     meta: 60
   })
 
-  // ==================== CARREGAR FEED (APENAS POSTS DE OUTROS USUÁRIOS) ====================
+  // ==================== VERIFICAR AUTENTICAÇÃO ====================
+  useEffect(() => {
+    console.log('🔍 [Painel] authLoading:', authLoading)
+    console.log('🔍 [Painel] user:', user)
+    
+    if (!authLoading) {
+      if (!user) {
+        console.log('⚠️ [Painel] Usuário não autenticado, redirecionando para login')
+        navigate('/login')
+      } else {
+        console.log('✅ [Painel] Usuário autenticado:', user.nome)
+      }
+    }
+  }, [user, authLoading, navigate])
+
+  // ==================== CARREGAR CLUBES DO USUÁRIO ====================
+  const carregarClubesDoUsuario = async () => {
+    if (!user) return
+    
+    try {
+      console.log('🔄 [Painel] Carregando clubes do usuário...')
+      
+      const { data, error } = await supabase
+        .from('clubes_membros')
+        .select(`
+          clube_id,
+          clubes (id, nome, logo, membros_total)
+        `)
+        .eq('usuario_id', user.id)
+        .limit(3)
+      
+      if (error) throw error
+      
+      if (data && data.length > 0) {
+        const clubesFormatados = data.map(item => ({
+          id: item.clubes.id,
+          nome: item.clubes.nome,
+          logo: item.clubes.logo || '/img/clube_default.jpg',
+          membros: item.clubes.membros_total || 0
+        }))
+        setClubesUsuario(clubesFormatados)
+        console.log('✅ [Painel] Clubes carregados:', clubesFormatados.length)
+      } else {
+        setClubesUsuario([])
+        console.log('⚠️ [Painel] Usuário não participa de nenhum clube')
+      }
+    } catch (error) {
+      console.error('❌ [Painel] Erro ao carregar clubes:', error)
+      setClubesUsuario([])
+    }
+  }
+
+  // ==================== ESCUTAR MUDANÇAS NOS CLUBES DO USUÁRIO ====================
+  useEffect(() => {
+    if (!user) return
+    
+    console.log('🔄 [Painel] Inscrevendo para mudanças nos clubes...')
+    
+    const clubesSubscription = supabase
+      .channel('clubes_membros_channel')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'clubes_membros',
+        filter: `usuario_id=eq.${user.id}`
+      }, (payload) => {
+        console.log('📢 [Painel] Mudança detectada nos clubes do usuário:', payload)
+        // Recarregar os clubes quando houver mudança (entrar/sair de clube)
+        carregarClubesDoUsuario()
+      })
+      .subscribe()
+    
+    return () => {
+      console.log('🔴 [Painel] Removendo inscrição de clubes')
+      clubesSubscription.unsubscribe()
+    }
+  }, [user])
+
+  // ==================== CARREGAR FEED ====================
   const carregarFeed = async () => {
     if (!user) return
     
     try {
-      console.log('Carregando feed para usuário:', user.id)
+      console.log('🔄 [Painel] Carregando feed para usuário:', user.id)
       
       const { data: atividades, error } = await supabase
         .from('atividades')
@@ -46,7 +125,7 @@ function Painel() {
       
       if (error) throw error
       
-      console.log('Atividades encontradas:', atividades?.length || 0)
+      console.log('📊 [Painel] Atividades encontradas:', atividades?.length || 0)
       
       const { data: curtidasData } = await supabase
         .from('curtidas')
@@ -111,7 +190,7 @@ function Painel() {
       
       setFeedPosts(formattedPosts)
     } catch (error) {
-      console.error('Erro ao carregar feed:', error)
+      console.error('❌ [Painel] Erro ao carregar feed:', error)
     }
   }
 
@@ -277,6 +356,8 @@ function Painel() {
 
   // ==================== ESCUTAR MUDANÇAS EM TEMPO REAL ====================
   useEffect(() => {
+    if (!user) return
+    
     const atividadesSubscription = supabase
       .channel('atividades_channel')
       .on('postgres_changes', { 
@@ -336,16 +417,39 @@ function Painel() {
   // ==================== LOADING INICIAL ====================
   useEffect(() => {
     const loadData = async () => {
+      console.log('🔄 [Painel] Carregando dados iniciais...')
       setLoading(true)
-      await carregarFeed()
-      await carregarSugestoes()
+      await Promise.all([
+        carregarFeed(),
+        carregarSugestoes(),
+        carregarClubesDoUsuario()
+      ])
       setLoading(false)
+      console.log('✅ [Painel] Dados carregados com sucesso!')
     }
     
-    if (user) {
+    if (user && !authLoading) {
       loadData()
     }
-  }, [user])
+  }, [user, authLoading])
+
+  // Mostrar loading enquanto verifica autenticação
+  if (authLoading) {
+    return (
+      <>
+        <Header />
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Verificando autenticação...</p>
+        </div>
+        <Footer />
+      </>
+    )
+  }
+
+  if (!user) {
+    return null
+  }
 
   if (loading) {
     return (
@@ -439,9 +543,6 @@ function Painel() {
         <div className="dashboard">
           {/* Feed */}
           <div className="feed">
-            <h3 style={{ marginBottom: '16px', color: 'var(--text-primary)' }}>
-              <i className="fa-solid fa-newspaper"></i> Atividades de outros usuários
-            </h3>
             
             {feedPosts.length > 0 ? (
               feedPosts.map(post => (
@@ -639,55 +740,43 @@ function Painel() {
               </div>
             </div>
 
-            {/* Clubes Participantes - COM AVATAR PADRÃO */}
+            {/* Clubes Participantes - Atualiza em tempo real */}
             <div className="rcard">
               <div className="rcard-header">
                 <span className="rcard-title">Clubes Participantes</span>
               </div>
               <div className="club-list">
-                <div className="club-item" onClick={() => navigate('/clubes')}>
-                  <div className="club-icon">
-                    <img 
-                      src="/img/outros/corredores_sjc.png" 
-                      alt="Corredores de SJC"
-                      onError={(e) => { e.target.src = '/img/clube_default.jpg' }}
-                    />
+                {clubesUsuario.length > 0 ? (
+                  clubesUsuario.map(clube => (
+                    <div key={clube.id} className="club-item" onClick={() => navigate(`/clube/${clube.id}`)}>
+                      <div className="club-icon">
+                        <img 
+                          src={clube.logo} 
+                          alt={clube.nome}
+                          onError={(e) => { e.target.src = '/img/clube_default.jpg' }}
+                        />
+                      </div>
+                      <div className="club-info">
+                        <div className="club-name">{clube.nome}</div>
+                        <div className="club-meta">
+                          <i className="fa-solid fa-users"></i> {clube.membros} membros
+                        </div>
+                      </div>
+                      <i className="fas fa-chevron-right"></i>
+                    </div>
+                  ))
+                ) : (
+                  <div className="empty-clubes">
+                    <p>Você ainda não participa de nenhum clube</p>
+                    <button className="btn-ver-clubes" onClick={() => navigate('/clubes')}>
+                      Ver clubes
+                    </button>
                   </div>
-                  <div className="club-info">
-                    <div className="club-name">Corredores de São José e Região</div>
-                    <div className="club-link">Visualizar Clube →</div>
-                  </div>
-                </div>
-                <div className="club-item" onClick={() => navigate('/clubes')}>
-                  <div className="club-icon">
-                    <img 
-                      src="/img/outros/ciclotech.png" 
-                      alt="Ciclotech"
-                      onError={(e) => { e.target.src = '/img/clube_default.jpg' }}
-                    />
-                  </div>
-                  <div className="club-info">
-                    <div className="club-name">Ciclotech <span className="verified"><i className="fa-solid fa-circle-check"></i></span></div>
-                    <div className="club-link">Visualizar Clube →</div>
-                  </div>
-                </div>
-                <div className="club-item" onClick={() => navigate('/clubes')}>
-                  <div className="club-icon">
-                    <img 
-                      src="/img/forza icon.png" 
-                      alt="FORZA"
-                      onError={(e) => { e.target.src = '/img/clube_default.jpg' }}
-                    />
-                  </div>
-                  <div className="club-info">
-                    <div className="club-name">FORZA <span className="verified"><i className="fa-solid fa-circle-check"></i></span></div>
-                    <div className="club-link">Visualizar Clube →</div>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 
-            {/* Amigos Sugeridos - COM AVATAR PADRÃO E TAMANHO IGUAL */}
+            {/* Amigos Sugeridos */}
             <div className="rcard">
               <div className="rcard-header">
                 <span className="rcard-title">
@@ -697,7 +786,14 @@ function Painel() {
               
               {sugestoes.map(amigo => (
                 <div key={amigo.id} className="amigo-item">
-                  <div className="amigo-avatar">
+                  <div 
+                    className="amigo-avatar"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      console.log('Navegando para perfil do amigo:', amigo.id, amigo.nome)
+                      navigate(`/perfil/${amigo.id}`)
+                    }}
+                  >
                     <img 
                       src={amigo.avatar} 
                       alt={amigo.nome}
@@ -705,7 +801,18 @@ function Painel() {
                     />
                   </div>
                   <div className="amigo-info">
-                    <div className="amigo-name" onClick={() => navigate(`/perfil/${amigo.id}`)}>
+                    <div 
+                      className="amigo-name" 
+                      style={{ 
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        color: 'var(--text-primary)'
+                      }}
+                      onClick={() => {
+                        console.log('Navegando para perfil pelo nome:', amigo.id, amigo.nome)
+                        navigate(`/perfil/${amigo.id}`)
+                      }}
+                    >
                       {amigo.nome}
                     </div>
                     <div className="amigo-location">
