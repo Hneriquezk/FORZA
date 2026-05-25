@@ -183,7 +183,7 @@ const Desafios = () => {
             <i className="fas fa-bicycle"></i> Ciclismo
           </button>
           <button className={`categoria-btn ${activeCategory === 'calorias' ? 'active' : ''}`} onClick={() => setActiveCategory('calorias')}>
-            <i className="fas fa-person-swimming"></i> Natação
+            <i className="fas fa-water"></i> Natação
           </button>
         </div>
 

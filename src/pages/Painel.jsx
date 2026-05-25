@@ -439,9 +439,6 @@ function Painel() {
         <div className="dashboard">
           {/* Feed */}
           <div className="feed">
-            <h3 style={{ marginBottom: '16px', color: 'var(--text-primary)' }}>
-              <i className="fa-solid fa-newspaper"></i> Atividades de outros usuários
-            </h3>
             
             {feedPosts.length > 0 ? (
               feedPosts.map(post => (
