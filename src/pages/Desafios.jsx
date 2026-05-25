@@ -1,20 +1,47 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useNotifications } from '../contexts/NotificationContext'
-import { desafiosData } from '../data/desafiosData'
+import { buscarDesafios } from '../services/desafiosService'
+import { useAuth } from '../contexts/AuthContext'
+import { completarDesafio } from '../services/desafiosCompletadosService'
 import Header from '../components/Layout/Header'
 import Footer from '../components/Layout/Footer'
 
 const Desafios = () => {
   const navigate = useNavigate()
   const { addNotification } = useNotifications()
+  const { user } = useAuth()
   const [activeCategory, setActiveCategory] = useState('tempo')
   const [participados, setParticipados] = useState([])
+  const [desafios, setDesafios] = useState({ tempo: [], distancia: [], calorias: [] })
+  const [carregando, setCarregando] = useState(true)
+  const [desafioForzaId, setDesafioForzaId] = useState(null)
 
   useEffect(() => {
     const saved = localStorage.getItem('forza_desafios_participados')
     if (saved) setParticipados(JSON.parse(saved))
   }, [])
+
+  useEffect(() => {
+  async function carregarDesafios() {
+    setCarregando(true)
+    const todosDesafios = await buscarDesafios()
+    
+    // Filtrar para REMOVER o desafio FORZA da lista
+    const desafiosSemForza = todosDesafios.filter(d => d.titulo !== 'Forza 10min x 10 dias')
+    
+    const organizados = {
+      tempo: desafiosSemForza.filter(d => d.categoria === 'tempo'),
+      distancia: desafiosSemForza.filter(d => d.categoria === 'distancia'),
+      calorias: desafiosSemForza.filter(d => d.categoria === 'calorias')
+    }
+    
+    setDesafios(organizados)
+    setCarregando(false)
+  }
+  
+  carregarDesafios()
+}, [])
 
   const handleParticipar = async (id, titulo) => {
     if (participados.includes(id)) {
@@ -32,15 +59,25 @@ const Desafios = () => {
   }
 
   const handleParticiparForza = async () => {
-    const desafioForzaId = 'forza_10min_10dias'
-    if (participados.includes(desafioForzaId)) {
+    // Buscar o ID real do desafio FORZA no banco
+    const todosDesafios = await buscarDesafios()
+    const desafioForza = todosDesafios.find(d => d.titulo === 'Forza 10min x 10 dias')
+    
+    if (!desafioForza) {
+      addNotification('Erro', 'Desafio FORZA não encontrado!', 'error', 'fa-exclamation-circle')
+      return
+    }
+    
+    const forzaId = desafioForza.id
+    
+    if (participados.includes(forzaId)) {
       addNotification('Desafio', 'Você já está participando do desafio FORZA!', 'warning', 'fa-exclamation-circle')
       return
     }
     
     const confirmed = await window.confirm('Deseja participar do desafio FORZA?\n\nComplete 10 minutos de atividade por 10 dias e ganhe uma medalha exclusiva!')
     if (confirmed) {
-      const newParticipados = [...participados, desafioForzaId]
+      const newParticipados = [...participados, forzaId]
       setParticipados(newParticipados)
       localStorage.setItem('forza_desafios_participados', JSON.stringify(newParticipados))
       addNotification('Desafio iniciado!', 'Você começou o desafio FORZA. Complete a meta e ganhe sua medalha!', 'success', 'fa-trophy')
@@ -58,16 +95,25 @@ const Desafios = () => {
   }
 
   const handleVerDesafio = (desafioId, titulo) => {
-    // Salvar o desafio selecionado no localStorage para a página de detalhes
     localStorage.setItem('desafio_selecionado', JSON.stringify({ id: desafioId, titulo }))
     navigate(`/desafio/${desafioId}`)
+  }
+
+  const handleVerDesafioForza = async () => {
+    const todosDesafios = await buscarDesafios()
+    const desafioForza = todosDesafios.find(d => d.titulo === 'Forza 10min x 10 dias')
+    if (desafioForza) {
+      navigate(`/desafio/${desafioForza.id}`)
+    } else {
+      addNotification('Erro', 'Desafio não encontrado!', 'error')
+    }
   }
 
   const getIconClass = (category) => {
     switch(category) {
       case 'tempo': return 'fa-clock'
       case 'distancia': return 'fa-road'
-      case 'calorias': return 'fa-fyre'
+      case 'calorias': return 'fa-fire'
       default: return 'fa-trophy'
     }
   }
@@ -97,28 +143,41 @@ const Desafios = () => {
             <i className={`fas ${isParticipando ? 'fa-check-circle' : 'fa-play'}`}></i>
             {isParticipando ? 'Participando' : 'Participar'}
           </button>
-          {isParticipando && (
-            <div className="desafio-actions">
-              <button 
-                className="btn-ver-desafio"
-                onClick={() => handleVerDesafio(desafio.id, desafio.titulo)}
-              >
-                <i className="fas fa-eye"></i> Ver Desafio
-              </button>
+          <div className="desafio-actions">
+            <button 
+              className="btn-ver-desafio"
+              onClick={() => handleVerDesafio(desafio.id, desafio.titulo)}
+            >
+              <i className="fas fa-eye"></i> Ver Desafio
+            </button>
+            {isParticipando && (
               <button 
                 className="btn-parar-participar"
                 onClick={() => handlePararDeParticipar(desafio.id, desafio.titulo)}
               >
                 <i className="fas fa-stop"></i> Parar
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     )
   }
 
-  const isParticipandoForza = participados.includes('forza_10min_10dias')
+  const isParticipandoForza = desafioForzaId && participados.includes(desafioForzaId)
+
+  if (carregando) {
+    return (
+      <>
+        <Header />
+        <div className="container" style={{ textAlign: 'center', padding: '100px' }}>
+          <i className="fas fa-spinner fa-spin" style={{ fontSize: '48px', color: '#ff1e2d' }}></i>
+          <p style={{ marginTop: '20px' }}>Carregando desafios...</p>
+        </div>
+        <Footer />
+      </>
+    )
+  }
 
   return (
     <>
@@ -157,13 +216,13 @@ const Desafios = () => {
               <div className="desafio-participando-actions">
                 <button 
                   className="btn-ver-desafio-forza"
-                  onClick={() => handleVerDesafio('forza_10min_10dias', 'Forza 10min x 10 dias')}
+                  onClick={handleVerDesafioForza}
                 >
                   <i className="fas fa-eye"></i> Ver Desafio
                 </button>
                 <button 
                   className="btn-parar-participar-forza"
-                  onClick={() => handlePararDeParticipar('forza_10min_10dias', 'Forza 10min x 10 dias')}
+                  onClick={() => desafioForzaId && handlePararDeParticipar(desafioForzaId, 'Forza 10min x 10 dias')}
                 >
                   <i className="fas fa-stop"></i> Parar de Participar
                 </button>
@@ -195,8 +254,8 @@ const Desafios = () => {
             {activeCategory === 'calorias' && 'Desafios de Calorias'}
           </div>
           <div className="desafios-grid">
-            {desafiosData[activeCategory] && desafiosData[activeCategory].length > 0 ? (
-              desafiosData[activeCategory].map(desafio => renderCard(desafio, activeCategory))
+            {desafios[activeCategory] && desafios[activeCategory].length > 0 ? (
+              desafios[activeCategory].map(desafio => renderCard(desafio, activeCategory))
             ) : (
               <div className="empty-state">
                 <i className="fas fa-trophy"></i>
@@ -217,7 +276,6 @@ const Desafios = () => {
           padding-bottom: 100px;
         }
         
-        /* Card Principal FORZA */
         .desafio-forza-card {
           background: var(--bg-card);
           border-radius: 28px;
@@ -427,8 +485,8 @@ const Desafios = () => {
         }
         
         .hero-medalha {
-          width: 180px;
-          height: 180px;
+          width: 220px;
+          height: 220px;
           object-fit: contain;
           position: relative;
           z-index: 1;

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useNotifications } from '../contexts/NotificationContext'
 import { supabase } from '../lib/supabase'
+import { buscarDesafiosCompletados } from '../services/desafiosCompletadosService'
 import Header from '../components/Layout/Header'
 import Footer from '../components/Layout/Footer'
 import Calendar from '../components/Calendar'
@@ -77,6 +78,10 @@ const Perfil = () => {
     seguindo: 0,
     seguidores: 0
   })
+
+  // Estados para desafios completados
+  const [desafiosCompletados, setDesafiosCompletados] = useState([])
+  const [carregandoDesafios, setCarregandoDesafios] = useState(false)
   
   const fileInputRef = useRef(null)
   const coverInputRef = useRef(null)
@@ -127,8 +132,17 @@ const Perfil = () => {
       loadUserProfile(usuarioId),
       loadUserPosts(usuarioId),
       loadStats(usuarioId),
-      loadLikedStatus()
+      loadLikedStatus(),
+      carregarDesafiosCompletados(usuarioId)
     ])
+  }
+
+  // ==================== CARREGAR DESAFIOS COMPLETADOS ====================
+  const carregarDesafiosCompletados = async (usuarioId) => {
+    setCarregandoDesafios(true)
+    const desafios = await buscarDesafiosCompletados(usuarioId)
+    setDesafiosCompletados(desafios)
+    setCarregandoDesafios(false)
   }
 
   // ==================== CARREGAR PERFIL DO USUÁRIO ====================
@@ -179,7 +193,6 @@ const Perfil = () => {
       
       if (data && data.length > 0) {
         const formattedPosts = data.map(post => {
-          // Pegar avatar do usuário diretamente do join
           const postAvatar = post.usuarios?.avatar || editForm.avatar || '/img/usuarios/default.jpg'
           const postNome = post.usuarios?.nome || editForm.nome || 'Usuário'
           
@@ -766,11 +779,52 @@ const Perfil = () => {
                 )}
               </div>
             ) : (
-              <div className="empty-desafios">
-                <i className="fas fa-trophy"></i>
-                <h3>Desafios Completos</h3>
-                <p>Desafios aparecerão aqui quando completados.</p>
-                <button className="btn-ver-desafios" onClick={() => navigate('/desafios')}>Ver desafios</button>
+              <div className="desafios-completos-container">
+                {carregandoDesafios ? (
+                  <div className="loading-container">
+                    <div className="loading-spinner"></div>
+                    <p>Carregando desafios...</p>
+                  </div>
+                ) : desafiosCompletados.length === 0 ? (
+                  <div className="empty-desafios">
+                    <i className="fas fa-trophy"></i>
+                    <h3>Desafios Completos</h3>
+                    <p>{isOwnProfile ? 'Você ainda não completou nenhum desafio.' : 'Este usuário ainda não completou nenhum desafio.'}</p>
+                    <p>Participe de desafios e ganhe medalhas exclusivas!</p>
+                    {isOwnProfile && (
+                      <button className="btn-ver-desafios" onClick={() => navigate('/desafios')}>
+                        <i className="fas fa-play"></i> Ver desafios disponíveis
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="desafios-header">
+                      <h2><i className="fas fa-medal"></i> Minhas Medalhas</h2>
+                      <p>{desafiosCompletados.length} {desafiosCompletados.length === 1 ? 'desafio completado' : 'desafios completados'}</p>
+                    </div>
+                    <div className="medalhas-grid">
+                      {desafiosCompletados.map(desafio => (
+                        <div key={desafio.id} className="medalha-card">
+                          <div className="medalha-imagem">
+                            <img 
+                              src={desafio.medalha_img || '/img/default-medal.png'} 
+                              alt={desafio.titulo_desafio}
+                              onError={(e) => { e.target.src = '/img/default-medal.png' }}
+                            />
+                          </div>
+                          <div className="medalha-info">
+                            <h4>{desafio.titulo_desafio}</h4>
+                            <p className="medalha-data">
+                              <i className="fas fa-calendar-check"></i> 
+                              Completado em: {new Date(desafio.completado_em).toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>

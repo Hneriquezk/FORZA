@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useNotifications } from '../contexts/NotificationContext'
 import { supabase } from '../lib/supabase'
+import { buscarDesafios } from '../services/desafiosService'
 import Header from '../components/Layout/Header'
 import Footer from '../components/Layout/Footer'
 import './painel.css'
@@ -19,6 +20,9 @@ function Painel() {
   const [comentariosVisiveis, setComentariosVisiveis] = useState({})
   const [comentarios, setComentarios] = useState({})
   
+  // Desafios ativos do usuário
+  const [desafiosAtivos, setDesafiosAtivos] = useState([])
+  
   // Estatísticas do usuário
   const [stats, setStats] = useState({
     calorias: 1250,
@@ -27,13 +31,149 @@ function Painel() {
     meta: 60
   })
 
-  // ==================== CARREGAR FEED (APENAS POSTS DE OUTROS USUÁRIOS) ====================
+  // ==================== CARREGAR DESAFIOS ATIVOS DO USUÁRIO ====================
+ // ==================== CARREGAR DESAFIOS ATIVOS DO USUÁRIO ====================
+const carregarDesafiosAtivos = async () => {
+  if (!user) {
+    setDesafiosAtivos([])
+    return
+  }
+  
+  try {
+    // Pegar IDs dos desafios que o usuário está participando
+    const saved = localStorage.getItem('forza_desafios_participados')
+    const participadosIds = saved ? JSON.parse(saved) : []
+    
+    if (participadosIds.length === 0) {
+      setDesafiosAtivos([])
+      return
+    }
+    
+    // Buscar dados completos dos desafios
+    const todosDesafios = await buscarDesafios()
+    
+    if (!todosDesafios || todosDesafios.length === 0) {
+      setDesafiosAtivos([])
+      return
+    }
+    
+    const desafiosParticipando = todosDesafios.filter(d => participadosIds.includes(d.id))
+    
+    // Buscar atividades do usuário para calcular progresso
+    let atividades = []
+    try {
+      const { data } = await supabase
+        .from('atividades')
+        .select('*')
+        .eq('usuario_id', user.id)
+      atividades = data || []
+    } catch (err) {
+      console.log('Erro ao buscar atividades:', err)
+      atividades = []
+    }
+    
+    // Buscar desafios já completados pelo usuário
+    let completadosIds = new Set()
+    try {
+      const { data } = await supabase
+        .from('desafios_completados')
+        .select('desafio_id')
+        .eq('usuario_id', user.id)
+      completadosIds = new Set(data?.map(d => d.desafio_id) || [])
+    } catch (err) {
+      console.log('Erro ao buscar desafios completados:', err)
+    }
+    
+    // Calcular progresso para cada desafio
+    const desafiosComProgresso = desafiosParticipando.map(desafio => {
+      let progresso = 0
+      let valorAtual = 0
+      let meta = 0
+      let unidade = ''
+      
+      const descricao = desafio.descricao ? desafio.descricao.toLowerCase() : ''
+      
+      if (descricao.includes('minutos')) {
+        const match = descricao.match(/(\d+)\s*minutos/)
+        if (match) meta = parseInt(match[1])
+        unidade = 'min'
+        
+        valorAtual = atividades?.reduce((total, act) => {
+          if (act.tempo) {
+            const partes = act.tempo.split(':')
+            const minutos = parseInt(partes[0]) * 60 + parseInt(partes[1])
+            return total + (isNaN(minutos) ? 0 : minutos)
+          }
+          return total
+        }, 0) || 0
+        
+        progresso = meta > 0 ? Math.min(Math.floor((valorAtual / meta) * 100), 100) : 0
+      } 
+      else if (descricao.includes('quilômetros') || descricao.includes('km')) {
+        const match = descricao.match(/(\d+)\s*quil[ôo]metros?/)
+        if (match) meta = parseInt(match[1])
+        unidade = 'km'
+        
+        valorAtual = atividades?.reduce((total, act) => {
+          if (act.distancia) {
+            let distancia = parseFloat(act.distancia)
+            if (isNaN(distancia) && typeof act.distancia === 'string') {
+              distancia = parseFloat(act.distancia.replace(' km', ''))
+            }
+            return total + (isNaN(distancia) ? 0 : distancia)
+          }
+          return total
+        }, 0) || 0
+        
+        progresso = meta > 0 ? Math.min(Math.floor((valorAtual / meta) * 100), 100) : 0
+      }
+      else if (descricao.includes('calorias')) {
+        const match = descricao.match(/(\d+)\s*mil\s*calorias?/)
+        if (match) meta = parseInt(match[1]) * 1000
+        unidade = 'cal'
+        
+        valorAtual = atividades?.reduce((total, act) => {
+          if (act.distancia) {
+            let distancia = parseFloat(act.distancia)
+            if (isNaN(distancia) && typeof act.distancia === 'string') {
+              distancia = parseFloat(act.distancia.replace(' km', ''))
+            }
+            return total + (isNaN(distancia) ? 0 : distancia * 70)
+          }
+          return total
+        }, 0) || 0
+        
+        progresso = meta > 0 ? Math.min(Math.floor((valorAtual / meta) * 100), 100) : 0
+      }
+      
+      const estaCompleto = completadosIds.has(desafio.id) || progresso >= 100
+      
+      return {
+        id: desafio.id,
+        titulo: desafio.titulo || 'Desafio',
+        meta: meta,
+        valorAtual: valorAtual,
+        progresso: estaCompleto ? 100 : progresso,
+        unidade: unidade,
+        completo: estaCompleto,
+        icone: 'fa-medal',
+        cor: desafio.categoria === 'tempo' ? 'red' : (desafio.categoria === 'distancia' ? 'green' : 'orange'),
+        medalhaImg: desafio.medalhaImg
+      }
+    })
+    
+    setDesafiosAtivos(desafiosComProgresso)
+  } catch (error) {
+    console.error('Erro ao carregar desafios ativos:', error)
+    setDesafiosAtivos([])
+  }
+}
+
+  // ==================== CARREGAR FEED ====================
   const carregarFeed = async () => {
     if (!user) return
     
     try {
-      console.log('Carregando feed para usuário:', user.id)
-      
       const { data: atividades, error } = await supabase
         .from('atividades')
         .select(`
@@ -45,8 +185,6 @@ function Painel() {
         .limit(50)
       
       if (error) throw error
-      
-      console.log('Atividades encontradas:', atividades?.length || 0)
       
       const { data: curtidasData } = await supabase
         .from('curtidas')
@@ -115,7 +253,7 @@ function Painel() {
     }
   }
 
-  // ==================== CARREGAR SUGESTÕES DE AMIGOS ====================
+  // ==================== CARREGAR SUGESTÕES ====================
   const carregarSugestoes = async () => {
     if (!user) return
     
@@ -156,7 +294,7 @@ function Painel() {
     }
   }
 
-  // ==================== FUNÇÃO PARA SEGUIR USUÁRIO ====================
+  // ==================== SEGUIR USUÁRIO ====================
   const handleSeguir = async (usuarioId, usuarioNome) => {
     try {
       if (seguindo[usuarioId]) {
@@ -169,7 +307,7 @@ function Painel() {
         if (error) throw error
         
         setSeguindo(prev => ({ ...prev, [usuarioId]: false }))
-        addNotification('➖ Deixou de seguir', `Você deixou de seguir ${usuarioNome}`, 'info', 'fa-user-minus')
+        addNotification('Deixou de seguir', `Você deixou de seguir ${usuarioNome}`, 'info', 'fa-user-minus')
       } else {
         const { error } = await supabase
           .from('seguidores')
@@ -178,10 +316,10 @@ function Painel() {
         if (error) throw error
         
         setSeguindo(prev => ({ ...prev, [usuarioId]: true }))
-        addNotification('➕ Seguindo', `Você começou a seguir ${usuarioNome}`, 'success', 'fa-user-plus')
+        addNotification('Seguindo', `Você começou a seguir ${usuarioNome}`, 'success', 'fa-user-plus')
       }
     } catch (error) {
-      console.error('Erro ao seguir/deixar de seguir:', error)
+      console.error('Erro ao seguir:', error)
       addNotification('Erro', 'Não foi possível completar a ação', 'error')
     }
   }
@@ -201,18 +339,12 @@ function Painel() {
       
       if (error) throw error
       
-      await supabase.rpc('incrementar_curtida', { post_id: postId })
-      
       setFeedPosts(feedPosts.map(post => 
         post.id === postId ? { ...post, curtidas: (post.curtidas || 0) + 1 } : post
       ))
       setLikedPosts({ ...likedPosts, [postId]: true })
       
-      if (postUsuarioId !== user.id) {
-        addNotification('❤️ Curtida!', `Você curtiu o post de ${postUsuarioNome}`, 'info', 'fa-heart')
-      } else {
-        addNotification('❤️ Curtida!', 'Você curtiu esta atividade!', 'info', 'fa-heart')
-      }
+      addNotification('Curtida!', `Você curtiu o post de ${postUsuarioNome}`, 'info', 'fa-heart')
     } catch (error) {
       console.error('Erro ao curtir:', error)
       addNotification('Erro', 'Não foi possível curtir', 'error')
@@ -257,11 +389,7 @@ function Painel() {
         }))
       }
       
-      if (postUsuarioId !== user.id) {
-        addNotification('💬 Comentário!', `Você comentou no post de ${postUsuarioNome}`, 'success', 'fa-comment')
-      } else {
-        addNotification('💬 Comentário!', 'Seu comentário foi publicado!', 'success', 'fa-comment')
-      }
+      addNotification('Comentário!', `Você comentou no post de ${postUsuarioNome}`, 'success', 'fa-comment')
     } catch (error) {
       console.error('Erro ao comentar:', error)
       addNotification('Erro', 'Não foi possível comentar', 'error')
@@ -275,7 +403,7 @@ function Painel() {
     }))
   }
 
-  // ==================== ESCUTAR MUDANÇAS EM TEMPO REAL ====================
+  // ==================== ESCUTAR MUDANÇAS ====================
   useEffect(() => {
     const atividadesSubscription = supabase
       .channel('atividades_channel')
@@ -286,50 +414,14 @@ function Painel() {
       }, (payload) => {
         if (payload.new.usuario_id !== user?.id) {
           carregarFeed()
-          supabase
-            .from('usuarios')
-            .select('nome')
-            .eq('id', payload.new.usuario_id)
-            .single()
-            .then(({ data }) => {
-              if (data) {
-                addNotification('📱 Nova atividade!', `${data.nome} publicou uma nova atividade!`, 'info', 'fa-bell')
-              }
-            })
-        }
-      })
-      .subscribe()
-    
-    const curtidasSubscription = supabase
-      .channel('curtidas_channel')
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'curtidas' 
-      }, (payload) => {
-        if (payload.new.usuario_id !== user?.id) {
-          carregarFeed()
-        }
-      })
-      .subscribe()
-    
-    const comentariosSubscription = supabase
-      .channel('comentarios_channel')
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'comentarios' 
-      }, (payload) => {
-        if (payload.new.usuario_id !== user?.id) {
-          carregarFeed()
+        } else {
+          carregarDesafiosAtivos()
         }
       })
       .subscribe()
     
     return () => {
       atividadesSubscription.unsubscribe()
-      curtidasSubscription.unsubscribe()
-      comentariosSubscription.unsubscribe()
     }
   }, [user])
 
@@ -339,6 +431,7 @@ function Painel() {
       setLoading(true)
       await carregarFeed()
       await carregarSugestoes()
+      await carregarDesafiosAtivos()
       setLoading(false)
     }
     
@@ -589,57 +682,49 @@ function Painel() {
 
           {/* Right Panel */}
           <div className="right-panel">
-            {/* Desafios Ativos */}
+            {/* Desafios Ativos - COM MEDALHAS REAIS */}
             <div className="rcard">
               <div className="rcard-header">
                 <span className="rcard-title">Desafios Ativos</span>
                 <Link to="/desafios" className="ver-todos">Ver todos <i className="fa-solid fa-chevron-right"></i></Link>
               </div>
-              <div className="desafio-item">
-                <div className="desafio-top">
-                  <div className="desafio-icon orange">
-                    <i className="fa-solid fa-person-running"></i>
+              
+              {desafiosAtivos.length > 0 ? (
+                desafiosAtivos.map(desafio => (
+                  <div key={desafio.id} className="desafio-item" onClick={() => navigate(`/desafio/${desafio.id}`)} style={{ cursor: 'pointer' }}>
+                    <div className="desafio-top">
+                      <div className={`desafio-icon ${desafio.cor}`}>
+                        {desafio.medalhaImg ? (
+                          <img 
+                            src={desafio.medalhaImg} 
+                            alt={desafio.titulo}
+                            style={{ width: '32px', height: '32px', objectFit: 'contain' }}
+                          />
+                        ) : (
+                          <i className={`fa-solid ${desafio.icone}`}></i>
+                        )}
+                      </div>
+                      <div className="desafio-name">{desafio.titulo}</div>
+                    </div>
+                    <div className="progress-bar">
+                      <div className={`progress-fill ${desafio.cor}`} style={{ width: `${desafio.progresso}%` }}></div>
+                    </div>
+                    <div className="desafio-progress-info">
+                      <span>{desafio.valorAtual.toFixed(0)} {desafio.unidade}</span>
+                      <span>{desafio.completo ? 'Completo!' : `${desafio.progresso}%`}</span>
+                    </div>
                   </div>
-                  <div className="desafio-name">100 quilômetros em Março</div>
+                ))
+              ) : (
+                <div className="empty-desafios" style={{ textAlign: 'center', padding: '30px' }}>
+                  <i className="fas fa-trophy" style={{ fontSize: '32px', color: '#ff1e2d', marginBottom: '12px' }}></i>
+                  <p>Você ainda não participa de nenhum desafio.</p>
+                  <Link to="/desafios" className="ver-todos" style={{ display: 'inline-block', marginTop: '12px' }}>Ver desafios disponíveis</Link>
                 </div>
-                <div className="progress-bar">
-                  <div className="progress-fill orange" style={{ width: '55%' }}></div>
-                </div>
-                <div className="desafio-progress-info">
-                  <span>55 Km</span><span>11 dias restantes</span>
-                </div>
-              </div>
-              <div className="desafio-item">
-                <div className="desafio-top">
-                  <div className="desafio-icon red">
-                    <i className="fa-solid fa-stopwatch"></i>
-                  </div>
-                  <div className="desafio-name">1000 minutos em Março</div>
-                </div>
-                <div className="progress-bar">
-                  <div className="progress-fill red" style={{ width: '70%' }}></div>
-                </div>
-                <div className="desafio-progress-info">
-                  <span>700 min</span><span>11 dias restantes</span>
-                </div>
-              </div>
-              <div className="desafio-item">
-                <div className="desafio-top">
-                  <div className="desafio-icon green">
-                    <i className="fa-solid fa-route"></i>
-                  </div>
-                  <div className="desafio-name">1000 quilômetros em Dezembro</div>
-                </div>
-                <div className="progress-bar">
-                  <div className="progress-fill green" style={{ width: '88%' }}></div>
-                </div>
-                <div className="desafio-progress-info">
-                  <span>880 km</span><span>Completo</span>
-                </div>
-              </div>
+              )}
             </div>
 
-            {/* Clubes Participantes - COM AVATAR PADRÃO */}
+            {/* Clubes Participantes */}
             <div className="rcard">
               <div className="rcard-header">
                 <span className="rcard-title">Clubes Participantes</span>
@@ -687,7 +772,7 @@ function Painel() {
               </div>
             </div>
 
-            {/* Amigos Sugeridos - COM AVATAR PADRÃO E TAMANHO IGUAL */}
+            {/* Amigos Sugeridos */}
             <div className="rcard">
               <div className="rcard-header">
                 <span className="rcard-title">

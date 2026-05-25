@@ -1196,3 +1196,265 @@
     font-size: 13px;
   }
 }
+/* Desafios Completados */
+.desafios-completos-container {
+  background: var(--bg-card);
+  border-radius: 24px;
+  padding: 24px;
+  margin-top: 20px;
+}
+
+.desafios-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.desafios-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.desafios-header h2 i {
+  color: #ff1e2d;
+  margin-right: 10px;
+}
+
+.desafios-header p {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.medalhas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.medalha-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.medalha-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+}
+
+.medalha-imagem {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #ff1e2d20, #e5182a20);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+.medalha-imagem {
+  flex-shrink: 0;
+  width: 120px;
+  height: 120px;
+  background: transparent;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.medalha-imagem img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.medalha-info {
+  flex: 1;
+}
+
+.medalha-info h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.medalha-data {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.medalha-data i {
+  color: #ff1e2d;
+  font-size: 12px;
+}
+
+.empty-desafios {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--bg-card);
+  border-radius: 24px;
+}
+
+.empty-desafios i {
+  font-size: 48px;
+  color: #ff1e2d;
+  margin-bottom: 16px;
+}
+
+.empty-desafios h3 {
+  font-size: 20px;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.empty-desafios p {
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.btn-ver-desafios {
+  margin-top: 20px;
+  background: linear-gradient(135deg, #ff1e2d, #e5182a);
+  border: none;
+  padding: 12px 24px;
+  border-radius: 40px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-ver-desafios:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 14px rgba(255, 30, 45, 0.4);
+}
+
+@media (max-width: 768px) {
+  .medalhas-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .medalha-card {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+.desafio-icon.orange {
+  background: rgba(255, 107, 53, 0.15);
+  color: #ff6b35;
+}
+
+.desafio-icon.red {
+  background: rgba(255, 30, 45, 0.15);
+  color: #ff1e2d;
+}
+
+.desafio-icon.green {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.progress-fill.orange {
+  background: #ff6b35;
+}
+
+.progress-fill.red {
+  background: #ff1e2d;
+}
+
+.progress-fill.green {
+  background: #10b981;
+}
+
+.empty-desafios {
+  text-align: center;
+  padding: 30px;
+}
+
+.empty-desafios p {
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+/* Ajuste para o ícone/medalha do desafio */
+/* Ajuste para o ícone/medalha do desafio */
+.desafio-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  flex-shrink: 0;
+  background: rgba(255, 30, 45, 0.15);
+}
+
+.desafio-icon {
+  width: 56px;
+  height: 56px;
+}
+
+.desafio-icon img {
+  width: 70px !important;
+  height: 70px !important;
+}
+.desafio-icon {
+  background: transparent !important;
+}
+
+.desafio-icon.red,
+.desafio-icon.green,
+.desafio-icon.orange {
+  background: transparent !important;
+}
+/* Cores específicas por categoria */
+.desafio-icon.red {
+  background: rgba(255, 30, 45, 0.15);
+}
+
+.desafio-icon.green {
+  background: rgba(16, 185, 129, 0.15);
+}
+
+.desafio-icon.orange {
+  background: rgba(255, 107, 53, 0.15);
+}
+
+/* Garantir que a imagem não fique distorcida */
+.desafio-icon img[src*=".png"] {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+/* Cores de fundo dos ícones */
+.desafio-icon.red {
+  background: rgba(255, 30, 45, 0.15);
+  color: #ff1e2d;
+}
+
+.desafio-icon.green {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.desafio-icon.orange {
+  background: rgba(255, 107, 53, 0.15);
+  color: #ff6b35;
+}
