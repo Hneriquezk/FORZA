@@ -13,23 +13,40 @@ export function AuthProvider({ children }) {
 
   const isAuthenticated = !!user
 
+  // ==================== CARREGAR USUÁRIO DO LOCALSTORAGE ====================
   useEffect(() => {
-    const storedUser = localStorage.getItem('forza_user')
-    if (storedUser) {
+    const carregarUsuarioStorage = () => {
+      console.log('🔍 [Auth] Iniciando carregamento do localStorage...')
+      
       try {
-        const parsedUser = JSON.parse(storedUser)
-        setUser(parsedUser)
+        const storedUser = localStorage.getItem('forza_user')
+        console.log('🔍 [Auth] localStorage tem usuário?', storedUser ? 'SIM' : 'NÃO')
+        
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser)
+          console.log('✅ [Auth] Usuário carregado com sucesso:', parsedUser.nome)
+          console.log('✅ [Auth] ID do usuário:', parsedUser.id)
+          console.log('✅ [Auth] Email do usuário:', parsedUser.email)
+          setUser(parsedUser)
+        } else {
+          console.log('⚠️ [Auth] Nenhum usuário encontrado no localStorage')
+        }
       } catch (e) {
-        console.error('Erro ao parsear usuário do localStorage', e)
+        console.error('❌ [Auth] Erro ao parsear usuário do localStorage', e)
         localStorage.removeItem('forza_user')
+      } finally {
+        setLoading(false)
+        console.log('🔍 [Auth] Loading finalizado, loading = false')
       }
     }
-    setLoading(false)
+    
+    carregarUsuarioStorage()
   }, [])
 
+  // ==================== LOGIN ====================
   const login = async (email, password) => {
     try {
-      console.log('Tentando login:', email)
+      console.log('🔍 [Auth] Tentando login:', email)
       
       const { data, error } = await supabase
         .from('usuarios')
@@ -39,29 +56,37 @@ export function AuthProvider({ children }) {
         .single()
 
       if (error) {
-        console.error('Erro na busca:', error)
+        console.error('❌ [Auth] Erro na busca:', error)
         return { success: false, error: 'Email ou senha incorretos!' }
       }
 
       if (!data) {
+        console.error('❌ [Auth] Usuário não encontrado')
         return { success: false, error: 'Email ou senha incorretos!' }
       }
 
+      console.log('✅ [Auth] Login realizado com sucesso:', data.nome)
+      console.log('✅ [Auth] Salvando no localStorage...')
+      
       setUser(data)
       localStorage.setItem('forza_user', JSON.stringify(data))
       
-      console.log('Login realizado com sucesso:', data.nome)
+      // Verificar se salvou corretamente
+      const verificarStorage = localStorage.getItem('forza_user')
+      console.log('🔍 [Auth] Verificação localStorage após salvar:', verificarStorage ? 'OK' : 'FALHOU')
+      
       return { success: true, user: data }
       
     } catch (error) {
-      console.error('Erro no login:', error)
+      console.error('❌ [Auth] Erro no login:', error)
       return { success: false, error: 'Email ou senha incorretos!' }
     }
   }
 
+  // ==================== CADASTRO ====================
   const cadastrar = async (userData) => {
     try {
-      console.log('Cadastrando:', userData.email)
+      console.log('🔍 [Auth] Cadastrando:', userData.email)
       
       const { data: existingUser } = await supabase
         .from('usuarios')
@@ -70,6 +95,7 @@ export function AuthProvider({ children }) {
         .single()
 
       if (existingUser) {
+        console.error('❌ [Auth] E-mail já cadastrado:', userData.email)
         return { success: false, error: 'Este e-mail já está cadastrado!' }
       }
 
@@ -87,26 +113,31 @@ export function AuthProvider({ children }) {
 
       if (error) throw error
 
-      console.log('Usuário cadastrado com sucesso!')
+      console.log('✅ [Auth] Usuário cadastrado com sucesso!')
       return { success: true }
       
     } catch (error) {
-      console.error('Erro no cadastro:', error)
+      console.error('❌ [Auth] Erro no cadastro:', error)
       return { success: false, error: 'Erro ao realizar cadastro. Tente novamente.' }
     }
   }
 
+  // ==================== LOGOUT ====================
   const logout = async () => {
+    console.log('🔴 [Auth] Fazendo logout...')
+    console.log('🔴 [Auth] Removendo usuário do estado e localStorage')
     setUser(null)
     localStorage.removeItem('forza_user')
+    console.log('✅ [Auth] Logout realizado com sucesso')
     return { success: true }
   }
 
+  // ==================== ATUALIZAR USUÁRIO ====================
   const updateUser = async (updates) => {
     try {
       if (!user) throw new Error('Usuário não autenticado')
 
-      console.log('🟡 Atualizando usuário no banco:', updates)
+      console.log('🟡 [Auth] Atualizando usuário no banco:', updates)
 
       const { error } = await supabase
         .from('usuarios')
@@ -119,13 +150,26 @@ export function AuthProvider({ children }) {
       setUser(updatedUser)
       localStorage.setItem('forza_user', JSON.stringify(updatedUser))
 
-      console.log('✅ Usuário atualizado com sucesso!')
+      console.log('✅ [Auth] Usuário atualizado com sucesso!')
       return { success: true }
       
     } catch (error) {
-      console.error('❌ Erro ao atualizar usuário:', error)
+      console.error('❌ [Auth] Erro ao atualizar usuário:', error)
       return { success: false, error: error.message }
     }
+  }
+
+  // ==================== VERIFICAR SESSÃO ATUAL ====================
+  const verificarSessao = () => {
+    console.log('🔍 [Auth] Verificando sessão atual')
+    console.log('🔍 [Auth] user:', user ? user.nome : 'null')
+    console.log('🔍 [Auth] loading:', loading)
+    console.log('🔍 [Auth] isAuthenticated:', isAuthenticated)
+    
+    const storedUser = localStorage.getItem('forza_user')
+    console.log('🔍 [Auth] localStorage atual:', storedUser ? 'tem usuário' : 'vazio')
+    
+    return { user, isAuthenticated, hasStorage: !!storedUser }
   }
 
   return (
@@ -136,7 +180,8 @@ export function AuthProvider({ children }) {
       logout,
       updateUser,
       loading,
-      isAuthenticated
+      isAuthenticated,
+      verificarSessao  // Função de debug
     }}>
       {children}
     </AuthContext.Provider>

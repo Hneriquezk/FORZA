@@ -10,7 +10,7 @@ import './painel.css'
 
 function Painel() {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { addNotification } = useNotifications()
   const [loading, setLoading] = useState(true)
   const [feedPosts, setFeedPosts] = useState([])
@@ -249,7 +249,7 @@ const carregarDesafiosAtivos = async () => {
       
       setFeedPosts(formattedPosts)
     } catch (error) {
-      console.error('Erro ao carregar feed:', error)
+      console.error('❌ [Painel] Erro ao carregar feed:', error)
     }
   }
 
@@ -405,6 +405,8 @@ const carregarDesafiosAtivos = async () => {
 
   // ==================== ESCUTAR MUDANÇAS ====================
   useEffect(() => {
+    if (!user) return
+    
     const atividadesSubscription = supabase
       .channel('atividades_channel')
       .on('postgres_changes', { 
@@ -428,17 +430,37 @@ const carregarDesafiosAtivos = async () => {
   // ==================== LOADING INICIAL ====================
   useEffect(() => {
     const loadData = async () => {
+      console.log('🔄 [Painel] Carregando dados iniciais...')
       setLoading(true)
       await carregarFeed()
       await carregarSugestoes()
       await carregarDesafiosAtivos()
       setLoading(false)
+      console.log('✅ [Painel] Dados carregados com sucesso!')
     }
     
-    if (user) {
+    if (user && !authLoading) {
       loadData()
     }
-  }, [user])
+  }, [user, authLoading])
+
+  // Mostrar loading enquanto verifica autenticação
+  if (authLoading) {
+    return (
+      <>
+        <Header />
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Verificando autenticação...</p>
+        </div>
+        <Footer />
+      </>
+    )
+  }
+
+  if (!user) {
+    return null
+  }
 
   if (loading) {
     return (
@@ -532,9 +554,6 @@ const carregarDesafiosAtivos = async () => {
         <div className="dashboard">
           {/* Feed */}
           <div className="feed">
-            <h3 style={{ marginBottom: '16px', color: 'var(--text-primary)' }}>
-              <i className="fa-solid fa-newspaper"></i> Atividades de outros usuários
-            </h3>
             
             {feedPosts.length > 0 ? (
               feedPosts.map(post => (
@@ -730,45 +749,33 @@ const carregarDesafiosAtivos = async () => {
                 <span className="rcard-title">Clubes Participantes</span>
               </div>
               <div className="club-list">
-                <div className="club-item" onClick={() => navigate('/clubes')}>
-                  <div className="club-icon">
-                    <img 
-                      src="/img/outros/corredores_sjc.png" 
-                      alt="Corredores de SJC"
-                      onError={(e) => { e.target.src = '/img/clube_default.jpg' }}
-                    />
+                {clubesUsuario.length > 0 ? (
+                  clubesUsuario.map(clube => (
+                    <div key={clube.id} className="club-item" onClick={() => navigate(`/clube/${clube.id}`)}>
+                      <div className="club-icon">
+                        <img 
+                          src={clube.logo} 
+                          alt={clube.nome}
+                          onError={(e) => { e.target.src = '/img/clube_default.jpg' }}
+                        />
+                      </div>
+                      <div className="club-info">
+                        <div className="club-name">{clube.nome}</div>
+                        <div className="club-meta">
+                          <i className="fa-solid fa-users"></i> {clube.membros} membros
+                        </div>
+                      </div>
+                      <i className="fas fa-chevron-right"></i>
+                    </div>
+                  ))
+                ) : (
+                  <div className="empty-clubes">
+                    <p>Você ainda não participa de nenhum clube</p>
+                    <button className="btn-ver-clubes" onClick={() => navigate('/clubes')}>
+                      Ver clubes
+                    </button>
                   </div>
-                  <div className="club-info">
-                    <div className="club-name">Corredores de São José e Região</div>
-                    <div className="club-link">Visualizar Clube →</div>
-                  </div>
-                </div>
-                <div className="club-item" onClick={() => navigate('/clubes')}>
-                  <div className="club-icon">
-                    <img 
-                      src="/img/outros/ciclotech.png" 
-                      alt="Ciclotech"
-                      onError={(e) => { e.target.src = '/img/clube_default.jpg' }}
-                    />
-                  </div>
-                  <div className="club-info">
-                    <div className="club-name">Ciclotech <span className="verified"><i className="fa-solid fa-circle-check"></i></span></div>
-                    <div className="club-link">Visualizar Clube →</div>
-                  </div>
-                </div>
-                <div className="club-item" onClick={() => navigate('/clubes')}>
-                  <div className="club-icon">
-                    <img 
-                      src="/img/forza icon.png" 
-                      alt="FORZA"
-                      onError={(e) => { e.target.src = '/img/clube_default.jpg' }}
-                    />
-                  </div>
-                  <div className="club-info">
-                    <div className="club-name">FORZA <span className="verified"><i className="fa-solid fa-circle-check"></i></span></div>
-                    <div className="club-link">Visualizar Clube →</div>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -782,7 +789,14 @@ const carregarDesafiosAtivos = async () => {
               
               {sugestoes.map(amigo => (
                 <div key={amigo.id} className="amigo-item">
-                  <div className="amigo-avatar">
+                  <div 
+                    className="amigo-avatar"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      console.log('Navegando para perfil do amigo:', amigo.id, amigo.nome)
+                      navigate(`/perfil/${amigo.id}`)
+                    }}
+                  >
                     <img 
                       src={amigo.avatar} 
                       alt={amigo.nome}
@@ -790,7 +804,18 @@ const carregarDesafiosAtivos = async () => {
                     />
                   </div>
                   <div className="amigo-info">
-                    <div className="amigo-name" onClick={() => navigate(`/perfil/${amigo.id}`)}>
+                    <div 
+                      className="amigo-name" 
+                      style={{ 
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        color: 'var(--text-primary)'
+                      }}
+                      onClick={() => {
+                        console.log('Navegando para perfil pelo nome:', amigo.id, amigo.nome)
+                        navigate(`/perfil/${amigo.id}`)
+                      }}
+                    >
                       {amigo.nome}
                     </div>
                     <div className="amigo-location">

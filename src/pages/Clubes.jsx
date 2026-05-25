@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useNotifications } from '../contexts/NotificationContext'
 import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../lib/supabase'
 import Header from '../components/Layout/Header'
 import Footer from '../components/Layout/Footer'
 import ClubeChat from '../components/ClubeChat'
@@ -12,69 +13,132 @@ const Clubes = () => {
   const { user } = useAuth()
   const [activeCategory, setActiveCategory] = useState('todos')
   const [searchTerm, setSearchTerm] = useState('')
+  const [clubes, setClubes] = useState([])
   const [membros, setMembros] = useState([])
+  const [loading, setLoading] = useState(true)
   const [selectedChat, setSelectedChat] = useState(null)
 
-  const clubesData = [
-    { id: 1, nome: "Corredores de São José dos Campos e Região", tipo: "corrida", membros: 5002, descricao: "Grupo de corrida de São José e região. Treinos diários, desafios semanais.", capa: "/img/clubes/corredores_sjc.jpg", avatar: "/img/clubes/corredores_sjc_avatar.jpg" },
-    { id: 2, nome: "NEM PENSA, SÓ VAI", tipo: "corrida", membros: 7606, descricao: "Comunidade para quem não quer pensar, só agir!", capa: "/img/clubes/nem_pensa_so_vai.jpg", avatar: "/img/clubes/nem_pensa_so_vai_avatar.jpg" },
-    { id: 3, nome: "Shimano Cycling Team", tipo: "ciclismo", membros: 16237, descricao: "Junte-se a outros atletas Shimano!", capa: "/img/clubes/shimano_cycling.jpg", avatar: "/img/clubes/shimano_cycling_avatar.jpg" },
-    { id: 4, nome: "RAPHA500 2026", tipo: "ciclismo", membros: 9211, descricao: "500km em 2026! Desafio anual para ciclistas.", capa: "/img/clubes/rapha500.jpg", avatar: "/img/clubes/rapha500_avatar.jpg" },
-    { id: 5, nome: "Tour de France Community", tipo: "ciclismo", membros: 305384, descricao: "Acompanhe as etapas do Tour!", capa: "/img/clubes/tour_france.jpg", avatar: "/img/clubes/tour_france_avatar.jpg" },
-    { id: 6, nome: "Forza Runners Elite", tipo: "corrida", membros: 3421, descricao: "Grupo exclusivo para alta performance.", capa: "/img/clubes/forza_runners_elite.jpg", avatar: "/img/clubes/forza_runners_elite_avatar.jpg" },
-    { id: 7, nome: "Triathlon Brasil", tipo: "fitness", membros: 12500, descricao: "Comunidade para triatletas.", capa: "/img/clubes/triathlon_brasil.jpg", avatar: "/img/clubes/triathlon_brasil_avatar.jpg" },
-    { id: 8, nome: "Maratonas Aquáticas", tipo: "natacao", membros: 3100, descricao: "Para amantes da natação em águas abertas.", capa: "/img/clubes/maratonas_aquaticas.jpg", avatar: "/img/clubes/maratonas_aquaticas_avatar.jpg" },
-    { id: 9, nome: "CrossFit Forza Team", tipo: "fitness", membros: 2150, descricao: "Equipe de alta performance no CrossFit.", capa: "/img/clubes/crossfit_forza.jpg", avatar: "/img/clubes/crossfit_forza_avatar.jpg" }
-  ]
+  // ==================== CARREGAR CLUBES DO BANCO ====================
+  const carregarClubes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('clubes')
+        .select('*')
+        .order('nome')
+      
+      if (error) throw error
+      setClubes(data || [])
+    } catch (error) {
+      console.error('Erro ao carregar clubes:', error)
+    }
+  }
 
-  const clubesParticipantes = clubesData.filter(clube => membros.includes(clube.id))
+  // ==================== CARREGAR MEMBROS DO USUÁRIO ====================
+  const carregarMembros = async () => {
+    if (!user) return
+    
+    try {
+      const { data, error } = await supabase
+        .from('clubes_membros')
+        .select('clube_id')
+        .eq('usuario_id', user.id)
+      
+      if (error) throw error
+      
+      const membrosIds = data.map(item => item.clube_id)
+      setMembros(membrosIds)
+    } catch (error) {
+      console.error('Erro ao carregar membros:', error)
+    }
+  }
 
-  useEffect(() => {
-    const saved = localStorage.getItem('forza_clubes_membros')
-    if (saved) setMembros(JSON.parse(saved))
-  }, [])
-
-  const entrarClube = async (id, nome) => {
-    const isMembro = membros.includes(id)
+  // ==================== ENTRAR/SAIR DO CLUBE ====================
+  const entrarClube = async (clubeId, clubeNome) => {
+    if (!user) {
+      addNotification('Faça login', 'Você precisa estar logado para entrar em um clube.', 'warning')
+      navigate('/login')
+      return
+    }
+    
+    const isMembro = membros.includes(clubeId)
     
     if (isMembro) {
-      // Usuário já é membro - confirmar saída
-      const confirmed = await window.confirm(`Deseja sair do clube "${nome}"?`)
+      const confirmed = await window.confirm(`Deseja sair do clube "${clubeNome}"?`)
       
       if (confirmed) {
-        const newMembros = membros.filter(m => m !== id)
-        setMembros(newMembros)
-        localStorage.setItem('forza_clubes_membros', JSON.stringify(newMembros))
-        addNotification('Saiu do clube', `Você saiu do clube "${nome}".`, 'info', 'fa-sign-out-alt')
-        if (selectedChat?.id === id) setSelectedChat(null)
+        const { error } = await supabase
+          .from('clubes_membros')
+          .delete()
+          .eq('usuario_id', user.id)
+          .eq('clube_id', clubeId)
+        
+        if (error) throw error
+        
+        setMembros(prev => prev.filter(id => id !== clubeId))
+        addNotification('Saiu do clube', `Você saiu do clube "${clubeNome}".`, 'info', 'fa-sign-out-alt')
+        
+        if (selectedChat?.id === clubeId) setSelectedChat(null)
       }
     } else {
-      // Usuário não é membro - confirmar entrada
-      const confirmed = await window.confirm(`Deseja entrar no clube "${nome}"?`)
+      const confirmed = await window.confirm(`Deseja entrar no clube "${clubeNome}"?`)
       
       if (confirmed) {
-        const newMembros = [...membros, id]
-        setMembros(newMembros)
-        localStorage.setItem('forza_clubes_membros', JSON.stringify(newMembros))
-        addNotification('Bem-vindo ao clube!', `Você entrou no clube "${nome}".`, 'success', 'fa-check-circle')
+        const { error } = await supabase
+          .from('clubes_membros')
+          .insert([{ usuario_id: user.id, clube_id: clubeId }])
+        
+        if (error) throw error
+        
+        setMembros(prev => [...prev, clubeId])
+        addNotification('Bem-vindo ao clube!', `Você entrou no clube "${clubeNome}".`, 'success', 'fa-check-circle')
       }
     }
   }
 
+  // ==================== IR PARA PÁGINA DO CLUBE ====================
   const irParaClube = (clubeId) => {
     navigate(`/clube/${clubeId}`)
   }
 
-  const filteredClubes = clubesData.filter(clube => {
-    const matchCategory = activeCategory === 'todos' || clube.tipo === activeCategory
+  // ==================== LOADING INICIAL ====================
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true)
+      await carregarClubes()
+      await carregarMembros()
+      setLoading(false)
+    }
+    loadData()
+  }, [user])
+
+  // ==================== FILTRAR CLUBES ====================
+  const filteredClubes = clubes.filter(clube => {
+    const matchCategory = activeCategory === 'todos' || 
+      (activeCategory === 'corrida' && clube.categoria === 'Corrida') ||
+      (activeCategory === 'ciclismo' && clube.categoria === 'Ciclismo') ||
+      (activeCategory === 'fitness' && clube.categoria === 'Fitness') ||
+      (activeCategory === 'natacao' && clube.categoria === 'Natação')
+    
     const matchSearch = clube.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        clube.descricao.toLowerCase().includes(searchTerm.toLowerCase())
+                       clube.descricao?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       clube.localizacao?.toLowerCase().includes(searchTerm.toLowerCase())
+    
     return matchCategory && matchSearch
   })
 
-  const getTipoNome = (tipo) => {
-    const tipos = { corrida: 'Corrida', ciclismo: 'Ciclismo', fitness: 'Fitness', natacao: 'Natação' }
-    return tipos[tipo] || tipo
+  const clubesParticipantes = clubes.filter(clube => membros.includes(clube.id))
+
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Carregando clubes...</p>
+        </div>
+        <Footer />
+      </>
+    )
   }
 
   return (
@@ -121,22 +185,28 @@ const Clubes = () => {
             return (
               <div key={clube.id} className="clube-card" onClick={() => isMembro && irParaClube(clube.id)}>
                 <div className="clube-capa">
-                  <img src={clube.capa} alt={clube.nome} />
+                  <img src={clube.capa || clube.logo || '/img/clube_capa_default.jpg'} alt={clube.nome} />
                   <div className="clube-avatar-wrapper">
-                    <img src={clube.avatar} alt={clube.nome} />
+                    <img src={clube.logo || '/img/clube_default.jpg'} alt={clube.nome} />
                   </div>
                 </div>
                 <div className="clube-content">
                   <div className="clube-header">
                     <h3>{clube.nome}</h3>
-                    <span className="clube-tipo">{getTipoNome(clube.tipo)}</span>
+                    <span className="clube-tipo">{clube.categoria}</span>
                   </div>
-                  <p className="clube-descricao">{clube.descricao}</p>
+                  <p className="clube-descricao">{clube.descricao || 'Clube de atividades físicas'}</p>
                   <div className="clube-stats">
                     <div className="stat">
                       <i className="fas fa-users"></i>
-                      <strong>{clube.membros.toLocaleString()}</strong> membros
+                      <strong>{clube.membros_total?.toLocaleString() || 0}</strong> membros
                     </div>
+                    {clube.localizacao && (
+                      <div className="stat">
+                        <i className="fas fa-map-marker-alt"></i>
+                        <span>{clube.localizacao}</span>
+                      </div>
+                    )}
                   </div>
                   {!isMembro ? (
                     <button className="btn-entrar" onClick={(e) => { e.stopPropagation(); entrarClube(clube.id, clube.nome) }}>
@@ -178,7 +248,7 @@ const Clubes = () => {
                   className="chat-clube-btn"
                   onClick={() => setSelectedChat({ id: clube.id, nome: clube.nome })}
                 >
-                  <img src={clube.avatar} alt={clube.nome} />
+                  <img src={clube.logo || '/img/clube_default.jpg'} alt={clube.nome} />
                   <div>
                     <strong>{clube.nome}</strong>
                     <span>Clique para conversar</span>
@@ -187,6 +257,14 @@ const Clubes = () => {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {filteredClubes.length === 0 && (
+          <div className="empty-clubes">
+            <i className="fas fa-search"></i>
+            <h3>Nenhum clube encontrado</h3>
+            <p>Tente ajustar sua busca ou filtro</p>
           </div>
         )}
       </div>
@@ -387,6 +465,11 @@ const Clubes = () => {
           gap: 8px;
           font-size: 13px;
           color: var(--text-secondary);
+          margin-bottom: 6px;
+        }
+        
+        .stat:last-child {
+          margin-bottom: 0;
         }
         
         .stat i {
@@ -535,6 +618,52 @@ const Clubes = () => {
         
         .chat-clube-btn i {
           color: var(--text-light);
+        }
+        
+        .empty-clubes {
+          text-align: center;
+          padding: 60px;
+          background: var(--bg-card);
+          border-radius: 24px;
+        }
+        
+        .empty-clubes i {
+          font-size: 48px;
+          color: var(--text-secondary);
+          margin-bottom: 16px;
+        }
+        
+        .empty-clubes h3 {
+          font-size: 20px;
+          color: var(--text-primary);
+          margin-bottom: 8px;
+        }
+        
+        .empty-clubes p {
+          color: var(--text-secondary);
+        }
+        
+        .loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 60vh;
+          gap: 20px;
+        }
+        
+        .loading-spinner {
+          width: 50px;
+          height: 50px;
+          border: 3px solid var(--border-color);
+          border-top: 3px solid #ff1e2d;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
         
         @media (max-width: 768px) {
