@@ -326,6 +326,14 @@
   font-size: 16px;
   font-weight: 700;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rcard-title i {
+  color: #ff1e2d;
+  font-size: 18px;
 }
 
 .ver-todos {
@@ -335,10 +343,12 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  transition: 0.2s;
 }
 
 .ver-todos:hover {
   text-decoration: underline;
+  gap: 8px;
 }
 
 /* Desafios */
@@ -410,40 +420,162 @@
   color: var(--text-secondary);
 }
 
-/* Clubes */
-.clube-item {
+/* ==================== CLUBES PARTICIPANTES - DESIGN MELHORADO ==================== */
+.club-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.club-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border-color);
+  gap: 14px;
+  padding: 12px;
+  background: var(--chat-bg);
+  border-radius: 16px;
+  transition: all 0.2s ease;
   cursor: pointer;
+  border: 1px solid var(--border-color);
 }
 
-.clube-item:last-child {
-  border-bottom: none;
+.club-item:hover {
+  transform: translateX(6px);
+  background: linear-gradient(135deg, var(--chat-bg) 0%, rgba(255, 30, 45, 0.05) 100%);
+  border-color: #ff1e2d;
+  box-shadow: 0 4px 12px rgba(255, 30, 45, 0.1);
 }
 
-.clube-info {
+.club-icon {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  transition: 0.2s;
+}
+
+.club-item:hover .club-icon {
+  border-color: #ff1e2d;
+  transform: scale(1.05);
+}
+
+.club-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.club-info {
   flex: 1;
 }
 
-.clube-name {
-  font-weight: 600;
+.club-name {
+  font-weight: 700;
+  font-size: 15px;
   color: var(--text-primary);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
-.verified {
-  color: #3b82f6;
+.club-category {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 30, 45, 0.1);
+  padding: 2px 8px;
+  border-radius: 20px;
   font-size: 10px;
-  margin-left: 4px;
+  font-weight: 600;
+  color: #ff1e2d;
 }
 
-.clube-link {
+.club-category i {
+  font-size: 10px;
+}
+
+.club-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.club-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.club-meta i {
   font-size: 11px;
   color: #ff1e2d;
+}
+
+.club-arrow {
+  color: var(--text-light);
+  font-size: 14px;
+  transition: all 0.2s;
+  opacity: 0.6;
+}
+
+.club-item:hover .club-arrow {
+  transform: translateX(4px);
+  color: #ff1e2d;
+  opacity: 1;
+}
+
+/* Empty State para Clubes */
+.empty-clubes {
+  text-align: center;
+  padding: 32px 20px;
+  background: var(--chat-bg);
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+}
+
+.empty-clubes i {
+  font-size: 48px;
+  color: var(--text-light);
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.empty-clubes p {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.empty-clubes .btn-ver-clubes {
+  background: linear-gradient(135deg, #ff1e2d, #e5182a);
+  border: none;
+  padding: 8px 20px;
+  border-radius: 40px;
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
   cursor: pointer;
-  margin-top: 2px;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.empty-clubes .btn-ver-clubes:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 30, 45, 0.3);
+  gap: 10px;
 }
 
 /* Amigos */
@@ -464,6 +596,21 @@
   border-bottom: none;
 }
 
+.amigo-avatar {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.amigo-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .amigo-info {
   flex: 1;
 }
@@ -475,12 +622,21 @@
   align-items: center;
   gap: 4px;
   flex-wrap: wrap;
+  cursor: pointer;
 }
 
 .amigo-location {
   font-size: 11px;
   color: var(--text-secondary);
   margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.amigo-location i {
+  font-size: 10px;
+  color: #ff1e2d;
 }
 
 .seguir-btn {
@@ -494,11 +650,23 @@
   color: var(--text-secondary);
   transition: 0.2s;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .seguir-btn:hover {
   background: #ff1e2d;
   color: white;
+}
+
+.seguir-btn.seguindo {
+  background: #10b981;
+  color: white;
+}
+
+.seguir-btn.seguindo:hover {
+  background: #059669;
 }
 
 /* Loading */
@@ -640,6 +808,49 @@
   transform: scale(1.05);
 }
 
+/* Empty States */
+.empty-feed {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--bg-card);
+  border-radius: 24px;
+  border: 1px solid var(--border-color);
+}
+
+.empty-feed i {
+  font-size: 48px;
+  color: var(--text-light);
+  margin-bottom: 16px;
+}
+
+.empty-feed h3 {
+  font-size: 18px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.empty-feed p {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.empty-sugestoes {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.empty-sugestoes i {
+  font-size: 48px;
+  color: var(--text-light);
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.empty-sugestoes p {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
 /* Responsividade */
 @media (max-width: 968px) {
   .stats-cards {
@@ -676,6 +887,16 @@
   .feed-images img { 
     width: 100%; 
   }
+  
+  .club-icon {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+  }
+  
+  .club-name {
+    font-size: 14px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -695,63 +916,116 @@
     padding: 4px 10px;
     font-size: 10px;
   }
+  
+  .club-item {
+    padding: 10px;
+  }
+  
+  .club-icon {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+  }
+  
+  .club-meta {
+    font-size: 10px;
+    gap: 8px;
+  }
 }
 
-/* ==================== CLUBES PARTICIPANTES - PAINEL ==================== */
-.club-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+/* Tema escuro suporte */
+@media (prefers-color-scheme: dark) {
+  .club-item {
+    background: #2a2a2a;
+    border-color: #3a3a3a;
+  }
+  
+  .club-item:hover {
+    background: linear-gradient(135deg, #2a2a2a 0%, rgba(255, 30, 45, 0.1) 100%);
+  }
+  
+  .club-name {
+    color: #fff;
+  }
+  
+  .empty-clubes i {
+    color: #555;
+  }
 }
 
-.club-item {
+/* ==================== DESAFIOS NO PAINEL ==================== */
+.desafio-item {
+  margin-bottom: 20px;
+  padding: 12px;
+  background: var(--chat-bg);
+  border-radius: 16px;
+  transition: all 0.2s ease;
+}
+
+.desafio-item:hover {
+  transform: translateX(4px);
+  background: rgba(255, 30, 45, 0.05);
+}
+
+.desafio-top {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-radius: 12px;
-  background: var(--chat-bg);
-  border: 1px solid var(--border-color);
+  margin-bottom: 10px;
 }
 
-.club-item:hover {
-  transform: translateX(4px);
-  background: var(--border-light);
-  border-color: #ff1e2d;
-}
-
-.club-icon {
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--bg-card);
+.desafio-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.club-icon img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.desafio-icon.red {
+  background: #ff1e2d20;
+  color: #ff1e2d;
 }
 
-.club-info {
-  flex: 1;
+.desafio-icon.orange {
+  background: #f59e0b20;
+  color: #f59e0b;
 }
 
-.club-name {
+.desafio-icon.green {
+  background: #10b98120;
+  color: #10b981;
+}
+
+.desafio-icon.blue {
+  background: #3b82f620;
+  color: #3b82f6;
+}
+
+.desafio-icon.purple {
+  background: #8b5cf620;
+  color: #8b5cf6;
+}
+
+.desafio-icon.teal {
+  background: #14b8a620;
+  color: #14b8a6;
+}
+
+.desafio-icon i {
+  font-size: 18px;
+}
+
+.desafio-name {
   font-weight: 600;
   font-size: 14px;
   color: var(--text-primary);
-  margin-bottom: 4px;
+  flex: 1;
 }
 
-.club-meta {
+.desafio-meta {
+  margin-bottom: 8px;
   font-size: 11px;
   color: var(--text-secondary);
   display: flex;
@@ -759,37 +1033,106 @@
   gap: 6px;
 }
 
-.club-meta i {
-  font-size: 11px;
+.desafio-meta i {
   color: #ff1e2d;
+  font-size: 10px;
 }
 
-.empty-clubes {
-  text-align: center;
-  padding: 20px;
+.progress-bar {
+  height: 6px;
+  background: var(--progress-bg);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.3s ease;
+}
+
+.progress-fill.red { background: #ff1e2d; }
+.progress-fill.orange { background: #f59e0b; }
+.progress-fill.green { background: #10b981; }
+.progress-fill.blue { background: #3b82f6; }
+.progress-fill.purple { background: #8b5cf6; }
+.progress-fill.teal { background: #14b8a6; }
+
+.desafio-progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
   color: var(--text-secondary);
-  background: var(--chat-bg);
-  border-radius: 12px;
-}
-
-.empty-clubes p {
-  font-size: 13px;
   margin-bottom: 10px;
 }
 
-.btn-ver-clubes {
-  background: #ff1e2d;
-  color: white;
+.desafio-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+.dias-restantes {
+  font-size: 10px;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-ver-desafio-painel {
+  background: transparent;
   border: none;
-  padding: 6px 16px;
-  border-radius: 30px;
-  cursor: pointer;
-  font-size: 12px;
+  color: #ff1e2d;
+  font-size: 11px;
   font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   transition: 0.2s;
 }
 
-.btn-ver-clubes:hover {
-  transform: scale(1.02);
-  background: #e5182a;
+.btn-ver-desafio-painel:hover {
+  gap: 8px;
+}
+
+.empty-desafios-painel {
+  text-align: center;
+  padding: 30px 20px;
+  background: var(--chat-bg);
+  border-radius: 16px;
+}
+
+.empty-desafios-painel i {
+  font-size: 40px;
+  color: var(--text-light);
+  margin-bottom: 12px;
+}
+
+.empty-desafios-painel p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.btn-explorar-desafios {
+  display: inline-block;
+  background: linear-gradient(135deg, #ff1e2d, #e5182a);
+  color: white;
+  text-decoration: none;
+  padding: 8px 20px;
+  border-radius: 30px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-explorar-desafios:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 30, 45, 0.3);
 }

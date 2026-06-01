@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useNotifications } from '../contexts/NotificationContext'
+import { useTheme } from '../contexts/ThemeContext'
 import Header from '../components/Layout/Header'
 import Footer from '../components/Layout/Footer'
 import './login.css'
@@ -10,6 +11,7 @@ function Login() {
   const navigate = useNavigate()
   const { login } = useAuth()
   const { addNotification } = useNotifications()
+  const { theme } = useTheme()
   const [credentials, setCredentials] = useState({
     email: '',
     senha: ''
@@ -48,11 +50,20 @@ function Login() {
     setLoading(false)
   }
 
+  const handleGoBack = () => {
+    navigate(-1) // Volta para a página anterior
+  }
+
   return (
     <div className="login-page-wrapper">
       <Header />
       
       <div className="login-container">
+        {/* Botão de voltar */}
+        <button onClick={handleGoBack} className="btn-back" aria-label="Voltar">
+          ← Voltar
+        </button>
+
         <div className="col-left">
           <img
             src="/img/login1.png"

@@ -150,39 +150,50 @@ const Perfil = () => {
   // ==================== CARREGAR CLUBES DO USUÁRIO ====================
   const carregarClubesDoUsuario = async (usuarioId) => {
     try {
-      console.log('🔄 Carregando clubes do usuário:', usuarioId)
+      console.log('🔄 [Perfil] Carregando clubes do usuário:', usuarioId)
       
       const { data, error } = await supabase
         .from('clubes_membros')
         .select(`
           clube_id,
-          funcao,
           data_entrada,
-          clubes (id, nome, descricao, logo, membros, categoria)
+          clubes (
+            id, 
+            nome, 
+            descricao, 
+            logo, 
+            capa,
+            categoria,
+            localizacao,
+            membros_total
+          )
         `)
         .eq('usuario_id', usuarioId)
       
       if (error) throw error
       
-      console.log('Clubes encontrados:', data?.length || 0)
+      console.log('📊 [Perfil] Clubes encontrados:', data?.length || 0)
       
       if (data && data.length > 0) {
         const clubesFormatados = data.map(item => ({
           id: item.clubes.id,
           nome: item.clubes.nome,
-          descricao: item.clubes.descricao,
+          descricao: item.clubes.descricao || 'Clube de atividades físicas',
           logo: item.clubes.logo || '/img/clube_default.jpg',
-          categoria: item.clubes.categoria,
-          membros: item.clubes.membros || 0,
-          funcao: item.funcao,
+          capa: item.clubes.capa || '/img/clube_capa_default.jpg',
+          categoria: item.clubes.categoria || 'Esporte',
+          localizacao: item.clubes.localizacao || 'Local não informado',
+          membros: item.clubes.membros_total || 0,
           data_entrada: item.data_entrada
         }))
         setClubesUsuario(clubesFormatados)
+        console.log('✅ [Perfil] Clubes carregados:', clubesFormatados.length)
       } else {
         setClubesUsuario([])
+        console.log('⚠️ [Perfil] Usuário não participa de nenhum clube')
       }
     } catch (error) {
-      console.error('Erro ao carregar clubes do usuário:', error)
+      console.error('❌ [Perfil] Erro ao carregar clubes do usuário:', error)
       setClubesUsuario([])
     }
   }
@@ -1058,7 +1069,7 @@ const Perfil = () => {
               </div>
             </div>
             
-            {/* Clubes Participantes - ATUALIZADO */}
+            {/* Clubes Participantes - VERSÃO ATUALIZADA */}
             <div className="sidebar-card">
               <h3><i className="fa-solid fa-users"></i> Clubes Participantes</h3>
               <div className="club-list">
@@ -1075,19 +1086,27 @@ const Perfil = () => {
                       <div className="club-info">
                         <div className="club-name">{clube.nome}</div>
                         <div className="club-meta">
+                          <span><i className="fa-solid fa-tag"></i> {clube.categoria}</span>
                           <span><i className="fa-solid fa-users"></i> {clube.membros || 0} membros</span>
-                          {clube.funcao && <span className="club-role">{clube.funcao}</span>}
                         </div>
+                        {clube.localizacao && clube.localizacao !== 'Local não informado' && (
+                          <div className="club-meta">
+                            <i className="fa-solid fa-location-dot"></i> {clube.localizacao}
+                          </div>
+                        )}
                       </div>
                       <i className="fas fa-chevron-right"></i>
                     </div>
                   ))
                 ) : (
                   <div className="empty-clubes">
-                    <p>Você ainda não participa de nenhum clube</p>
-                    <button className="btn-explorar-clubes" onClick={() => navigate('/clubes')}>
-                      Explorar Clubes
-                    </button>
+                    <i className="fa-solid fa-users-slash"></i>
+                    <p>{isOwnProfile ? 'Você ainda não participa de nenhum clube' : 'Este usuário não participa de nenhum clube'}</p>
+                    {isOwnProfile && (
+                      <button className="btn-explorar-clubes" onClick={() => navigate('/clubes')}>
+                        Explorar Clubes
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

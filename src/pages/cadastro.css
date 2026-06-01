@@ -1,7 +1,50 @@
+/* Variáveis do tema claro (padrão) */
+:root {
+  --cadastro-bg: white;
+  --cadastro-text-primary: #1a1a1a;
+  --cadastro-text-secondary: #666;
+  --cadastro-input-bg: #f5f5f5;
+  --cadastro-input-border: #e0e0e0;
+  --cadastro-input-focus-border: #1a1a1a;
+  --cadastro-btn-bg: #1a1a1a;
+  --cadastro-btn-hover-bg: #333;
+  --cadastro-error-bg: #fee;
+  --cadastro-error-border: #fcc;
+  --cadastro-error-text: #d32f2f;
+  --cadastro-footer-border: #f0f0f0;
+  --cadastro-link-color: #999;
+  --cadastro-link-hover: #1a1a1a;
+  --cadastro-separator: #ccc;
+  --cadastro-logo-text: #1a1a1a;
+}
+
+/* Modo escuro */
+.dark,
+[data-theme="dark"] {
+  --cadastro-bg: #1a1a1a;
+  --cadastro-text-primary: #ffffff;
+  --cadastro-text-secondary: #aaaaaa;
+  --cadastro-input-bg: #2a2a2a;
+  --cadastro-input-border: #3a3a3a;
+  --cadastro-input-focus-border: #ff1e2d;
+  --cadastro-btn-bg: #ff1e2d;
+  --cadastro-btn-hover-bg: #e5182a;
+  --cadastro-error-bg: #2a1a1a;
+  --cadastro-error-border: #5a2a2a;
+  --cadastro-error-text: #ff6b6b;
+  --cadastro-footer-border: #2a2a2a;
+  --cadastro-link-color: #888888;
+  --cadastro-link-hover: #ffffff;
+  --cadastro-separator: #555555;
+  --cadastro-logo-text: #ffffff;
+}
+
+/* Aplicação das variáveis */
 .cadastro-page-wrapper {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: var(--cadastro-bg);
 }
 
 .cadastro-container {
@@ -9,18 +52,13 @@
   flex: 1;
   min-height: calc(100vh - 73px - 220px);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  background: var(--cadastro-bg);
 }
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-}
-
-.cadastro-container {
-  display: flex;
-  min-height: 100vh;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
 }
 
 /* Colunas - todas com mesma largura */
@@ -40,7 +78,7 @@
 
 /* Coluna Central */
 .cadastro-col-center {
-  background: white;
+  background: var(--cadastro-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -77,7 +115,7 @@
   font-size: 32px;
   font-weight: 700;
   letter-spacing: -0.5px;
-  color: #1a1a1a;
+  color: var(--cadastro-logo-text);
   margin: 0;
 }
 
@@ -92,12 +130,12 @@
   font-weight: 600;
   line-height: 1.3;
   margin-bottom: 12px;
-  color: #1a1a1a;
+  color: var(--cadastro-text-primary);
 }
 
 .cadastro-slogan-description {
   font-size: 14px;
-  color: #666;
+  color: var(--cadastro-text-secondary);
   line-height: 1.5;
 }
 
@@ -111,7 +149,7 @@
 }
 
 .cadastro-link {
-  color: #999;
+  color: var(--cadastro-link-color);
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
@@ -120,17 +158,17 @@
 }
 
 .cadastro-link.active {
-  color: #1a1a1a;
-  border-bottom: 2px solid #1a1a1a;
+  color: var(--cadastro-text-primary);
+  border-bottom: 2px solid var(--cadastro-text-primary);
   padding-bottom: 4px;
 }
 
 .cadastro-link:hover {
-  color: #1a1a1a;
+  color: var(--cadastro-link-hover);
 }
 
 .cadastro-separator {
-  color: #ccc;
+  color: var(--cadastro-separator);
 }
 
 /* Formulário */
@@ -145,27 +183,29 @@
 .cadastro-input-field {
   width: 100%;
   padding: 12px 14px;
-  background: #f5f5f5;
-  border: 1px solid #e0e0e0;
+  background: var(--cadastro-input-bg);
+  border: 1px solid var(--cadastro-input-border);
   border-radius: 10px;
   font-size: 14px;
   transition: all 0.3s;
+  color: var(--cadastro-text-primary);
 }
 
 .cadastro-input-field:focus {
   outline: none;
-  border-color: #1a1a1a;
-  background: white;
+  border-color: var(--cadastro-input-focus-border);
+  background: var(--cadastro-input-bg);
 }
 
 .cadastro-input-field::placeholder {
-  color: #aaa;
+  color: var(--cadastro-text-secondary);
+  opacity: 0.7;
 }
 
 .cadastro-btn-submit {
   width: 100%;
   padding: 12px;
-  background: #1a1a1a;
+  background: var(--cadastro-btn-bg);
   color: white;
   border: none;
   border-radius: 10px;
@@ -177,14 +217,14 @@
 }
 
 .cadastro-btn-submit:hover {
-  background: #333;
+  background: var(--cadastro-btn-hover-bg);
   transform: translateY(-2px);
 }
 
 .cadastro-error-msg {
-  background: #fee;
-  border: 1px solid #fcc;
-  color: #d32f2f;
+  background: var(--cadastro-error-bg);
+  border: 1px solid var(--cadastro-error-border);
+  color: var(--cadastro-error-text);
   padding: 10px;
   border-radius: 8px;
   font-size: 12px;
@@ -196,23 +236,23 @@
 .cadastro-footer-area {
   margin-top: 24px;
   padding-top: 20px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--cadastro-footer-border);
 }
 
 .cadastro-privacy {
   font-size: 10px;
-  color: #999;
+  color: var(--cadastro-text-secondary);
   text-align: center;
 }
 
 .cadastro-privacy a {
-  color: #666;
+  color: var(--cadastro-link-color);
   text-decoration: none;
   margin: 0 4px;
 }
 
 .cadastro-privacy a:hover {
-  color: #1a1a1a;
+  color: var(--cadastro-link-hover);
   text-decoration: underline;
 }
 
@@ -240,4 +280,36 @@
   .cadastro-logo-text {
     font-size: 28px;
   }
+}
+
+.cadastro-btn-back {
+  position: absolute;
+  top: 20px;
+  left: 30px;
+  background-color: rgba(0, 0, 0, 0.5);  /* ← reduzido de 0.7 para 0.5 */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  z-index: 10;
+  backdrop-filter: blur(5px);
+  opacity: 0.7;  /* ← adicionado opacidade */
+}
+
+.cadastro-btn-back:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+  opacity: 1;  /* ← opacidade total ao passar o mouse */
+  transform: translateX(-3px);
+}
+
+/* Garantir que o container tenha position relative */
+.cadastro-container {
+  position: relative;
 }

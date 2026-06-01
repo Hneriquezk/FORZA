@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useNotifications } from '../contexts/NotificationContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -17,19 +17,22 @@ const Clubes = () => {
   const [membros, setMembros] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedChat, setSelectedChat] = useState(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
 
-  // ==================== CARREGAR CLUBES DO BANCO ====================
+  // ==================== CARREGAR CLUBES DO SUPABASE ====================
   const carregarClubes = async () => {
     try {
+      console.log('🔄 [Clubes] Carregando clubes do Supabase...')
       const { data, error } = await supabase
         .from('clubes')
         .select('*')
         .order('nome')
       
       if (error) throw error
+      console.log('✅ [Clubes] Clubes carregados:', data?.length || 0)
       setClubes(data || [])
     } catch (error) {
-      console.error('Erro ao carregar clubes:', error)
+      console.error('❌ [Clubes] Erro ao carregar clubes:', error)
     }
   }
 
@@ -38,6 +41,7 @@ const Clubes = () => {
     if (!user) return
     
     try {
+      console.log('🔄 [Clubes] Carregando membros do usuário:', user.id)
       const { data, error } = await supabase
         .from('clubes_membros')
         .select('clube_id')
@@ -47,8 +51,9 @@ const Clubes = () => {
       
       const membrosIds = data.map(item => item.clube_id)
       setMembros(membrosIds)
+      console.log('✅ [Clubes] Membros carregados:', membrosIds.length)
     } catch (error) {
-      console.error('Erro ao carregar membros:', error)
+      console.error('❌ [Clubes] Erro ao carregar membros:', error)
     }
   }
 
@@ -66,32 +71,98 @@ const Clubes = () => {
       const confirmed = await window.confirm(`Deseja sair do clube "${clubeNome}"?`)
       
       if (confirmed) {
-        const { error } = await supabase
-          .from('clubes_membros')
-          .delete()
-          .eq('usuario_id', user.id)
-          .eq('clube_id', clubeId)
-        
-        if (error) throw error
-        
-        setMembros(prev => prev.filter(id => id !== clubeId))
-        addNotification('Saiu do clube', `Você saiu do clube "${clubeNome}".`, 'info', 'fa-sign-out-alt')
-        
-        if (selectedChat?.id === clubeId) setSelectedChat(null)
+        try {
+          console.log('🔄 [Clubes] Saindo do clube:', clubeId)
+          const { error } = await supabase
+            .from('clubes_membros')
+            .delete()
+            .eq('usuario_id', user.id)
+            .eq('clube_id', clubeId)
+          
+          if (error) throw error
+          
+          setMembros(prev => prev.filter(id => id !== clubeId))
+          addNotification('Saiu do clube', `Você saiu do clube "${clubeNome}".`, 'info', 'fa-sign-out-alt')
+          
+          if (selectedChat?.id === clubeId) setSelectedChat(null)
+          console.log('✅ [Clubes] Saiu do clube com sucesso!')
+        } catch (error) {
+          console.error('❌ [Clubes] Erro ao sair:', error)
+          addNotification('Erro', `Não foi possível sair do clube: ${error.message}`, 'error')
+        }
       }
     } else {
       const confirmed = await window.confirm(`Deseja entrar no clube "${clubeNome}"?`)
       
       if (confirmed) {
-        const { error } = await supabase
-          .from('clubes_membros')
-          .insert([{ usuario_id: user.id, clube_id: clubeId }])
-        
-        if (error) throw error
-        
-        setMembros(prev => [...prev, clubeId])
-        addNotification('Bem-vindo ao clube!', `Você entrou no clube "${clubeNome}".`, 'success', 'fa-check-circle')
+        try {
+          console.log('🔄 [Clubes] Entrando no clube:', clubeId)
+          const { error } = await supabase
+            .from('clubes_membros')
+            .insert([{ usuario_id: user.id, clube_id: clubeId }])
+          
+          if (error) throw error
+          
+          setMembros(prev => [...prev, clubeId])
+          addNotification('Bem-vindo ao clube!', `Você entrou no clube "${clubeNome}".`, 'success', 'fa-check-circle')
+          console.log('✅ [Clubes] Entrou no clube com sucesso!')
+        } catch (error) {
+          console.error('❌ [Clubes] Erro ao entrar:', error)
+          addNotification('Erro', `Não foi possível entrar no clube: ${error.message}`, 'error')
+        }
       }
+    }
+  }
+
+  // ==================== CRIAR CLUBE NO SUPABASE ====================
+  const criarClube = async (novoClube) => {
+    if (!user) {
+      addNotification('Faça login', 'Você precisa estar logado para criar um clube.', 'warning')
+      return
+    }
+
+    try {
+      console.log('🔄 [Clubes] Criando novo clube...')
+      
+      const { data, error } = await supabase
+        .from('clubes')
+        .insert([
+          {
+            nome: novoClube.nome,
+            descricao: novoClube.descricao,
+            categoria: novoClube.categoria === 'corrida' ? 'Corrida' :
+                       novoClube.categoria === 'ciclismo' ? 'Ciclismo' :
+                       novoClube.categoria === 'fitness' ? 'Fitness' : 'Natação',
+            localizacao: novoClube.localizacao || 'Não informado',
+            logo: novoClube.avatar || '/img/clube_default.jpg',
+            capa: novoClube.capa || '/img/clube_capa_default.jpg',
+            membros_total: 1,
+            criador_id: user.id
+          }
+        ])
+        .select()
+      
+      if (error) throw error
+      
+      const clubeCriado = data[0]
+      console.log('✅ [Clubes] Clube criado:', clubeCriado)
+      
+      // Adicionar o criador como membro
+      const { error: membroError } = await supabase
+        .from('clubes_membros')
+        .insert([{ usuario_id: user.id, clube_id: clubeCriado.id }])
+      
+      if (membroError) throw membroError
+      
+      setMembros(prev => [...prev, clubeCriado.id])
+      await carregarClubes()
+      
+      addNotification('Clube criado!', `Seu clube "${novoClube.nome}" foi criado com sucesso.`, 'success', 'fa-check-circle')
+      setShowCreateModal(false)
+      navigate(`/clube/${clubeCriado.id}`)
+    } catch (error) {
+      console.error('❌ [Clubes] Erro ao criar clube:', error)
+      addNotification('Erro', `Não foi possível criar o clube: ${error.message}`, 'error')
     }
   }
 
@@ -99,6 +170,35 @@ const Clubes = () => {
   const irParaClube = (clubeId) => {
     navigate(`/clube/${clubeId}`)
   }
+
+  // ==================== ESCUTAR MUDANÇAS EM TEMPO REAL ====================
+  useEffect(() => {
+    if (!user) return
+
+    console.log('🔄 [Clubes] Inscrevendo para mudanças nos membros...')
+
+    const membrosSubscription = supabase
+      .channel('clubes_membros_changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'clubes_membros',
+          filter: `usuario_id=eq.${user.id}`
+        }, 
+        (payload) => {
+          console.log('📢 [Clubes] Mudança detectada nos membros:', payload)
+          carregarMembros()
+          carregarClubes()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      console.log('🔴 [Clubes] Removendo inscrição de membros')
+      membrosSubscription.unsubscribe()
+    }
+  }, [user])
 
   // ==================== LOADING INICIAL ====================
   useEffect(() => {
@@ -119,7 +219,7 @@ const Clubes = () => {
       (activeCategory === 'fitness' && clube.categoria === 'Fitness') ||
       (activeCategory === 'natacao' && clube.categoria === 'Natação')
     
-    const matchSearch = clube.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchSearch = clube.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                        clube.descricao?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                        clube.localizacao?.toLowerCase().includes(searchTerm.toLowerCase())
     
@@ -127,6 +227,26 @@ const Clubes = () => {
   })
 
   const clubesParticipantes = clubes.filter(clube => membros.includes(clube.id))
+
+  const getTipoNome = (categoria) => {
+    const tipos = { 
+      'Corrida': 'Corrida',
+      'Ciclismo': 'Ciclismo',
+      'Fitness': 'Fitness',
+      'Natação': 'Natação'
+    }
+    return tipos[categoria] || categoria
+  }
+
+  const getTipoIcone = (categoria) => {
+    const icones = { 
+      'Corrida': 'fa-running', 
+      'Ciclismo': 'fa-bicycle', 
+      'Fitness': 'fa-dumbbell', 
+      'Natação': 'fa-water'
+    }
+    return icones[categoria] || 'fa-users'
+  }
 
   if (loading) {
     return (
@@ -147,8 +267,10 @@ const Clubes = () => {
       
       <div className="container">
         <div className="clubes-hero">
-          <h1>Clubes</h1>
-          <p>Encontre grupos de pessoas com os mesmos objetivos que você. Treine junto, <br /> compartilhe experiências e evolua!</p>
+          <div className="hero-content">
+            <h1>Clubes</h1>
+            <p>Encontre grupos de pessoas com os mesmos objetivos que você. Treine junto, compartilhe experiências e evolua!</p>
+          </div>
         </div>
 
         <div className="search-bar">
@@ -182,24 +304,33 @@ const Clubes = () => {
         <div className="clubes-grid">
           {filteredClubes.map(clube => {
             const isMembro = membros.includes(clube.id)
+            const isUserClub = clube.criador_id === user?.id
             return (
-              <div key={clube.id} className="clube-card" onClick={() => isMembro && irParaClube(clube.id)}>
+              <div key={clube.id} className={`clube-card ${isUserClub ? 'user-club' : ''}`} onClick={() => isMembro && irParaClube(clube.id)}>
+                {isUserClub && (
+                  <div className="user-club-badge">
+                    <i className="fas fa-crown"></i> Meu Clube
+                  </div>
+                )}
                 <div className="clube-capa">
-                  <img src={clube.capa || clube.logo || '/img/clube_capa_default.jpg'} alt={clube.nome} />
+                  <img src={clube.capa || '/img/clube_capa_default.jpg'} alt={clube.nome} onError={(e) => e.target.src = "/img/clube_capa_default.jpg"} />
                   <div className="clube-avatar-wrapper">
-                    <img src={clube.logo || '/img/clube_default.jpg'} alt={clube.nome} />
+                    <img src={clube.logo || '/img/clube_default.jpg'} alt={clube.nome} onError={(e) => e.target.src = "/img/clube_default.jpg"} />
                   </div>
                 </div>
                 <div className="clube-content">
                   <div className="clube-header">
                     <h3>{clube.nome}</h3>
-                    <span className="clube-tipo">{clube.categoria}</span>
+                    <span className="clube-tipo">
+                      <i className={`fas ${getTipoIcone(clube.categoria)}`}></i>
+                      {getTipoNome(clube.categoria)}
+                    </span>
                   </div>
-                  <p className="clube-descricao">{clube.descricao || 'Clube de atividades físicas'}</p>
+                  <p className="clube-descricao">{clube.descricao || "Sem descrição"}</p>
                   <div className="clube-stats">
                     <div className="stat">
                       <i className="fas fa-users"></i>
-                      <strong>{clube.membros_total?.toLocaleString() || 0}</strong> membros
+                      <strong>{clube.membros_total?.toLocaleString() || 1}</strong> membros
                     </div>
                     {clube.localizacao && (
                       <div className="stat">
@@ -215,7 +346,7 @@ const Clubes = () => {
                   ) : (
                     <div className="clube-member-actions">
                       <button className="btn-membro" onClick={(e) => { e.stopPropagation(); irParaClube(clube.id) }}>
-                        <i className="fas fa-eye"></i> Ver Clube
+                        <i className="fas fa-eye"></i> {isUserClub ? 'Administrar' : 'Ver Clube'}
                       </button>
                       <button className="btn-chat" onClick={(e) => { e.stopPropagation(); setSelectedChat({ id: clube.id, nome: clube.nome }) }}>
                         <i className="fas fa-comment-dots"></i> Chat
@@ -227,6 +358,13 @@ const Clubes = () => {
             )
           })}
         </div>
+
+        {showCreateModal && (
+          <CreateClubeModal 
+            onClose={() => setShowCreateModal(false)}
+            onCreate={criarClube}
+          />
+        )}
 
         {selectedChat && (
           <div className="chat-section">
@@ -248,7 +386,7 @@ const Clubes = () => {
                   className="chat-clube-btn"
                   onClick={() => setSelectedChat({ id: clube.id, nome: clube.nome })}
                 >
-                  <img src={clube.logo || '/img/clube_default.jpg'} alt={clube.nome} />
+                  <img src={clube.logo || '/img/clube_default.jpg'} alt={clube.nome} onError={(e) => e.target.src = "/img/clube_default.jpg"} />
                   <div>
                     <strong>{clube.nome}</strong>
                     <span>Clique para conversar</span>
@@ -260,7 +398,7 @@ const Clubes = () => {
           </div>
         )}
 
-        {filteredClubes.length === 0 && (
+        {filteredClubes.length === 0 && !loading && (
           <div className="empty-clubes">
             <i className="fas fa-search"></i>
             <h3>Nenhum clube encontrado</h3>
@@ -268,6 +406,11 @@ const Clubes = () => {
           </div>
         )}
       </div>
+
+      <button className="btn-criar-clube-fixed" onClick={() => setShowCreateModal(true)}>
+        <i className="fas fa-plus-circle"></i>
+        <span>Criar Clube</span>
+      </button>
 
       <Footer />
 
@@ -286,13 +429,13 @@ const Clubes = () => {
           text-align: center;
         }
         
-        .clubes-hero h1 {
+        .hero-content h1 {
           font-size: 36px;
           margin-bottom: 12px;
           color: var(--text-primary);
         }
         
-        .clubes-hero p {
+        .hero-content p {
           color: var(--text-secondary);
           font-size: 16px;
         }
@@ -369,10 +512,32 @@ const Clubes = () => {
           flex-direction: column;
           height: 100%;
           cursor: pointer;
+          position: relative;
+        }
+        
+        .clube-card.user-club {
+          border: 2px solid #ff1e2d;
         }
         
         .clube-card:hover {
           transform: translateY(-4px);
+        }
+        
+        .user-club-badge {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          background: linear-gradient(135deg, #ff1e2d, #e5182a);
+          color: white;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 11px;
+          font-weight: 600;
+          z-index: 2;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
         
         .clube-capa {
@@ -441,6 +606,9 @@ const Clubes = () => {
           color: #ff1e2d;
           white-space: nowrap;
           flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          gap: 6px;
         }
         
         .clube-descricao {
@@ -620,6 +788,31 @@ const Clubes = () => {
           color: var(--text-light);
         }
         
+        .btn-criar-clube-fixed {
+          position: fixed;
+          bottom: 30px;
+          right: 30px;
+          background: linear-gradient(135deg, #ff1e2d, #e5182a);
+          border: none;
+          padding: 14px 28px;
+          border-radius: 50px;
+          color: white;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 16px;
+          transition: all 0.3s ease;
+          z-index: 1000;
+          box-shadow: 0 4px 15px rgba(255, 30, 45, 0.3);
+        }
+        
+        .btn-criar-clube-fixed:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 6px 20px rgba(255, 30, 45, 0.4);
+        }
+        
         .empty-clubes {
           text-align: center;
           padding: 60px;
@@ -669,6 +862,7 @@ const Clubes = () => {
         @media (max-width: 768px) {
           .container {
             padding: 20px;
+            padding-bottom: 80px;
           }
           .clubes-grid {
             grid-template-columns: 1fr;
@@ -685,9 +879,575 @@ const Clubes = () => {
           .clube-member-actions {
             flex-direction: column;
           }
+          .hero-content h1 {
+            font-size: 28px;
+          }
+          .btn-criar-clube-fixed {
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            font-size: 14px;
+          }
         }
       `}</style>
     </>
+  )
+}
+
+// Componente Modal para Criar Clube (mantido igual ao seu, sem alterações)
+const CreateClubeModal = ({ onClose, onCreate }) => {
+  const [formData, setFormData] = useState({
+    nome: '',
+    descricao: '',
+    localizacao: '',
+    sobre: '',
+    categoria: 'corrida',
+    tipo: 'publico',
+    regiao: '',
+    horariosTreino: [
+      { dia: 'Terça', horario: '19h30', local: '' },
+      { dia: 'Quinta', horario: '19h30', local: '' },
+      { dia: 'Sábado', horario: '07h00', local: '' }
+    ],
+    redesSociais: {
+      instagram: '',
+      whatsapp: '',
+      twitter: ''
+    },
+    capa: '',
+    avatar: ''
+  })
+
+  const [capaPreview, setCapaPreview] = useState(null)
+  const [avatarPreview, setAvatarPreview] = useState(null)
+  const capaInputRef = useRef(null)
+  const avatarInputRef = useRef(null)
+
+  const regioes = [
+    'Vale do Paraíba',
+    'Região Metropolitana de São Paulo',
+    'Litoral Norte',
+    'Campinas e Região',
+    'Sorocaba e Região',
+    'Ribeirão Preto',
+    'Outra região'
+  ]
+
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleHorarioChange = (index, field, value) => {
+    const novosHorarios = [...formData.horariosTreino]
+    novosHorarios[index][field] = value
+    setFormData(prev => ({ ...prev, horariosTreino: novosHorarios }))
+  }
+
+  const handleRedesSociaisChange = (rede, value) => {
+    setFormData(prev => ({
+      ...prev,
+      redesSociais: { ...prev.redesSociais, [rede]: value }
+    }))
+  }
+
+  const addHorario = () => {
+    setFormData(prev => ({
+      ...prev,
+      horariosTreino: [...prev.horariosTreino, { dia: '', horario: '', local: '' }]
+    }))
+  }
+
+  const removeHorario = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      horariosTreino: prev.horariosTreino.filter((_, i) => i !== index)
+    }))
+  }
+
+  const handleCapaUpload = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setCapaPreview(reader.result)
+        setFormData(prev => ({ ...prev, capa: reader.result }))
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleAvatarUpload = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result)
+        setFormData(prev => ({ ...prev, avatar: reader.result }))
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (!formData.nome.trim()) {
+      alert('Por favor, informe o nome do clube')
+      return
+    }
+    if (!formData.descricao.trim()) {
+      alert('Por favor, informe uma descrição')
+      return
+    }
+    onCreate(formData)
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>Criar Novo Clube</h2>
+          <button className="modal-close" onClick={onClose}>
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="modal-form">
+          <div className="form-section">
+            <h3>Imagens do Clube</h3>
+            <div className="image-upload-area">
+              <div className="upload-item">
+                <label>Foto de Capa (Banner)</label>
+                <div className="upload-preview capa-preview" onClick={() => capaInputRef.current?.click()} style={{ backgroundImage: capaPreview ? `url(${capaPreview})` : 'none' }}>
+                  {!capaPreview && (
+                    <div className="upload-placeholder">
+                      <i className="fas fa-image"></i>
+                      <span>Clique para adicionar capa</span>
+                    </div>
+                  )}
+                </div>
+                <input type="file" ref={capaInputRef} accept="image/*" onChange={handleCapaUpload} style={{ display: 'none' }} />
+                <p className="upload-hint">Recomendado: 1200x400px</p>
+              </div>
+
+              <div className="upload-item">
+                <label>Foto de Perfil (Avatar)</label>
+                <div className="upload-preview avatar-preview" onClick={() => avatarInputRef.current?.click()} style={{ backgroundImage: avatarPreview ? `url(${avatarPreview})` : 'none' }}>
+                  {!avatarPreview && (
+                    <div className="upload-placeholder">
+                      <i className="fas fa-user-circle"></i>
+                      <span>Clique para adicionar avatar</span>
+                    </div>
+                  )}
+                </div>
+                <input type="file" ref={avatarInputRef} accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} />
+                <p className="upload-hint">Recomendado: 200x200px</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="form-section">
+            <h3>Informações Básicas</h3>
+            <div className="form-group">
+              <label>Nome do Clube *</label>
+              <input type="text" name="nome" value={formData.nome} onChange={handleChange} placeholder="Ex: Corredores do Vale" required />
+            </div>
+
+            <div className="form-group">
+              <label>Categoria</label>
+              <select name="categoria" value={formData.categoria} onChange={handleChange}>
+                <option value="corrida">Corrida</option>
+                <option value="ciclismo">Ciclismo</option>
+                <option value="fitness">Fitness</option>
+                <option value="natacao">Natação</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Tipo do Clube</label>
+              <div className="radio-group">
+                <label className="radio-label">
+                  <input type="radio" name="tipo" value="publico" checked={formData.tipo === 'publico'} onChange={handleChange} />
+                  <span> Público</span>
+                </label>
+                <label className="radio-label">
+                  <input type="radio" name="tipo" value="privado" checked={formData.tipo === 'privado'} onChange={handleChange} />
+                  <span> Privado</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Região</label>
+              <select name="regiao" value={formData.regiao} onChange={handleChange}>
+                <option value="">Selecione uma região</option>
+                {regioes.map(regiao => (
+                  <option key={regiao} value={regiao}>{regiao}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Localização (Cidade/Estado)</label>
+              <input type="text" name="localizacao" value={formData.localizacao} onChange={handleChange} placeholder="Ex: São José dos Campos, SP" />
+            </div>
+          </div>
+
+          <div className="form-section">
+            <h3>Sobre o Clube</h3>
+            <div className="form-group">
+              <label>Descrição Curta *</label>
+              <textarea name="descricao" value={formData.descricao} onChange={handleChange} placeholder="Breve descrição do clube..." rows="3" required />
+            </div>
+
+            <div className="form-group">
+              <label>Sobre (Descrição Detalhada)</label>
+              <textarea name="sobre" value={formData.sobre} onChange={handleChange} placeholder="História, valores, objetivos do clube..." rows="5" />
+            </div>
+          </div>
+
+          <div className="form-section">
+            <h3>Horários de Treino</h3>
+            <p className="section-hint">Adicione os dias e horários dos treinos regulares</p>
+            {formData.horariosTreino.map((horario, index) => (
+              <div key={index} className="horario-item">
+                <div className="horario-fields">
+                  <input type="text" placeholder="Dia" value={horario.dia} onChange={(e) => handleHorarioChange(index, 'dia', e.target.value)} />
+                  <input type="text" placeholder="Horário" value={horario.horario} onChange={(e) => handleHorarioChange(index, 'horario', e.target.value)} />
+                  <input type="text" placeholder="Local" value={horario.local} onChange={(e) => handleHorarioChange(index, 'local', e.target.value)} />
+                </div>
+                {formData.horariosTreino.length > 1 && (
+                  <button type="button" className="btn-remove" onClick={() => removeHorario(index)}>
+                    <i className="fas fa-trash"></i>
+                  </button>
+                )}
+              </div>
+            ))}
+            <button type="button" className="btn-add-horario" onClick={addHorario}>
+              <i className="fas fa-plus"></i> Adicionar Horário
+            </button>
+          </div>
+
+          <div className="form-section">
+            <h3>Redes Sociais</h3>
+            <div className="form-group">
+              <label><i className="fab fa-instagram"></i> Instagram</label>
+              <input type="text" placeholder="@seudominio" value={formData.redesSociais.instagram} onChange={(e) => handleRedesSociaisChange('instagram', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label><i className="fab fa-whatsapp"></i> WhatsApp / Telegram</label>
+              <input type="text" placeholder="Link do grupo" value={formData.redesSociais.whatsapp} onChange={(e) => handleRedesSociaisChange('whatsapp', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label><i className="fab fa-twitter"></i> Twitter</label>
+              <input type="text" placeholder="Link do clube no Twitter" value={formData.redesSociais.twitter} onChange={(e) => handleRedesSociaisChange('twitter', e.target.value)} />
+            </div>
+          </div>
+
+          <div className="modal-actions">
+            <button type="button" className="btn-cancel" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="btn-create">Criar Clube</button>
+          </div>
+        </form>
+      </div>
+
+      <style jsx>{`
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.8);
+          backdrop-filter: blur(8px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          overflow-y: auto;
+          padding: 20px;
+        }
+        
+        .modal-container {
+          background: var(--bg-card);
+          border-radius: 24px;
+          width: 100%;
+          max-width: 750px;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 24px 28px;
+          border-bottom: 1px solid var(--border-color);
+          position: sticky;
+          top: 0;
+          background: var(--bg-card);
+          z-index: 10;
+        }
+        
+        .modal-header h2 {
+          font-size: 22px;
+          color: var(--text-primary);
+        }
+        
+        .modal-close {
+          background: transparent;
+          border: none;
+          font-size: 20px;
+          cursor: pointer;
+          color: var(--text-secondary);
+          transition: 0.2s;
+        }
+        
+        .modal-close:hover {
+          color: #ff1e2d;
+        }
+        
+        .modal-form {
+          padding: 28px;
+        }
+        
+        .form-section {
+          margin-bottom: 32px;
+        }
+        
+        .form-section h3 {
+          font-size: 18px;
+          font-weight: 600;
+          color: var(--text-primary);
+          margin-bottom: 16px;
+        }
+        
+        .section-hint {
+          font-size: 13px;
+          color: var(--text-secondary);
+          margin-bottom: 16px;
+        }
+        
+        .form-group {
+          margin-bottom: 20px;
+        }
+        
+        .form-group label {
+          display: block;
+          margin-bottom: 8px;
+          font-weight: 500;
+          color: var(--text-primary);
+          font-size: 14px;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+          width: 100%;
+          padding: 12px 16px;
+          background: var(--chat-bg);
+          border: 1px solid var(--border-color);
+          border-radius: 12px;
+          color: var(--text-primary);
+          font-size: 14px;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+          outline: none;
+          border-color: #ff1e2d;
+        }
+        
+        .radio-group {
+          display: flex;
+          gap: 24px;
+        }
+        
+        .radio-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+        }
+        
+        .radio-label input {
+          width: auto;
+        }
+        
+        .horario-item {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 12px;
+          align-items: center;
+        }
+        
+        .horario-fields {
+          flex: 1;
+          display: grid;
+          grid-template-columns: 1fr 1fr 1.5fr;
+          gap: 12px;
+        }
+        
+        .horario-fields input {
+          padding: 10px 12px;
+        }
+        
+        .btn-remove {
+          background: #ff1e2d20;
+          border: none;
+          padding: 10px;
+          border-radius: 8px;
+          cursor: pointer;
+          color: #ff1e2d;
+        }
+        
+        .btn-remove:hover {
+          background: #ff1e2d;
+          color: white;
+        }
+        
+        .btn-add-horario {
+          background: transparent;
+          border: 1px dashed var(--border-color);
+          padding: 10px;
+          border-radius: 12px;
+          cursor: pointer;
+          color: var(--text-secondary);
+          width: 100%;
+          margin-top: 8px;
+        }
+        
+        .btn-add-horario:hover {
+          border-color: #ff1e2d;
+          color: #ff1e2d;
+        }
+        
+        .modal-actions {
+          display: flex;
+          gap: 16px;
+          justify-content: flex-end;
+          padding-top: 20px;
+          border-top: 1px solid var(--border-color);
+          margin-top: 20px;
+        }
+        
+        .btn-cancel {
+          padding: 12px 28px;
+          background: var(--chat-bg);
+          border: 1px solid var(--border-color);
+          border-radius: 40px;
+          cursor: pointer;
+          color: var(--text-secondary);
+          font-weight: 500;
+        }
+        
+        .btn-cancel:hover {
+          background: #ff1e2d20;
+          border-color: #ff1e2d;
+          color: #ff1e2d;
+        }
+        
+        .btn-create {
+          padding: 12px 32px;
+          background: linear-gradient(135deg, #ff1e2d, #e5182a);
+          border: none;
+          border-radius: 40px;
+          color: white;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .btn-create:hover {
+          transform: translateY(-2px);
+        }
+        
+        .image-upload-area {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 24px;
+          margin-bottom: 20px;
+        }
+        
+        .upload-preview {
+          background-color: var(--chat-bg);
+          border: 2px dashed var(--border-color);
+          border-radius: 12px;
+          cursor: pointer;
+          transition: 0.2s;
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+        }
+        
+        .capa-preview {
+          height: 120px;
+        }
+        
+        .avatar-preview {
+          height: 150px;
+          border-radius: 50%;
+          width: 150px;
+          margin: 0 auto;
+        }
+        
+        .upload-preview:hover {
+          border-color: #ff1e2d;
+        }
+        
+        .upload-placeholder {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          gap: 8px;
+          color: var(--text-secondary);
+        }
+        
+        .upload-placeholder i {
+          font-size: 32px;
+        }
+        
+        .upload-placeholder span {
+          font-size: 12px;
+        }
+        
+        .upload-hint {
+          font-size: 11px;
+          color: var(--text-secondary);
+          margin-top: 6px;
+          text-align: center;
+        }
+        
+        @media (max-width: 640px) {
+          .modal-container {
+            max-width: 95%;
+          }
+          .horario-fields {
+            grid-template-columns: 1fr;
+          }
+          .horario-item {
+            flex-direction: column;
+          }
+          .radio-group {
+            flex-direction: column;
+            gap: 12px;
+          }
+          .image-upload-area {
+            grid-template-columns: 1fr;
+          }
+          .avatar-preview {
+            width: 120px;
+            height: 120px;
+          }
+        }
+      `}</style>
+    </div>
   )
 }
 
