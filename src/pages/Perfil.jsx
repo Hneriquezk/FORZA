@@ -41,6 +41,10 @@ const Perfil = () => {
   const [posts, setPosts] = useState([])
   const [activeSports, setActiveSports] = useState(['running', 'cycling', 'swimming'])
   const [likedPosts, setLikedPosts] = useState({})
+  const [postComentarios, setPostComentarios] = useState({})
+  const [comentariosVisiveisPerfil, setComentariosVisiveisPerfil] = useState({})
+  const [curtidasDoPost, setCurtidasDoPost] = useState({})
+  const [clubesUsuario, setClubesUsuario] = useState([])
   
   const [showPostModal, setShowPostModal] = useState(false)
   const [showLikesModal, setShowLikesModal] = useState(false)
@@ -49,7 +53,8 @@ const Perfil = () => {
   const [postToDelete, setPostToDelete] = useState(null)
   const [selectedPost, setSelectedPost] = useState(null)
   const [newPost, setNewPost] = useState({
-    atividade: '',
+    titulo: '',
+    tipo: 'Corrida',
     local: '',
     distancia: '',
     tempo: '',
@@ -85,18 +90,26 @@ const Perfil = () => {
 
   // ==================== CARREGAR PERFIL ====================
   useEffect(() => {
+    console.log('ID recebido na URL:', id)
+    console.log('Usuário logado ID:', user?.id)
+    
     if (id && id !== user?.id) {
+      console.log('🔵 É perfil de OUTRO usuário - ID:', id)
       setIsOwnProfile(false)
       carregarPerfilUsuario(id)
     } else if (user) {
+      console.log('🟢 É próprio perfil - ID:', user.id)
       setIsOwnProfile(true)
       setPerfilUser(user)
       carregarDadosUsuario(user.id)
+    } else {
+      console.log('⚠️ Nenhum usuário logado')
     }
   }, [id, user])
 
   const carregarPerfilUsuario = async (usuarioId) => {
     try {
+      console.log('🔄 Carregando perfil do usuário:', usuarioId)
       const { data, error } = await supabase
         .from('usuarios')
         .select('*')
@@ -104,6 +117,8 @@ const Perfil = () => {
         .single()
       
       if (error) throw error
+      
+      console.log('✅ Perfil carregado:', data?.nome)
       setPerfilUser(data)
       await carregarDadosUsuario(usuarioId)
       
@@ -117,7 +132,7 @@ const Perfil = () => {
         setEstaSeguindo(segue && segue.length > 0)
       }
     } catch (error) {
-      console.error('Erro ao carregar perfil:', error)
+      console.error('❌ Erro ao carregar perfil:', error)
       navigate('/painel')
     }
   }
@@ -127,8 +142,60 @@ const Perfil = () => {
       loadUserProfile(usuarioId),
       loadUserPosts(usuarioId),
       loadStats(usuarioId),
-      loadLikedStatus()
+      loadLikedStatus(),
+      carregarClubesDoUsuario(usuarioId)
     ])
+  }
+
+  // ==================== CARREGAR CLUBES DO USUÁRIO ====================
+  const carregarClubesDoUsuario = async (usuarioId) => {
+    try {
+      console.log('🔄 [Perfil] Carregando clubes do usuário:', usuarioId)
+      
+      const { data, error } = await supabase
+        .from('clubes_membros')
+        .select(`
+          clube_id,
+          data_entrada,
+          clubes (
+            id, 
+            nome, 
+            descricao, 
+            logo, 
+            capa,
+            categoria,
+            localizacao,
+            membros_total
+          )
+        `)
+        .eq('usuario_id', usuarioId)
+      
+      if (error) throw error
+      
+      console.log('📊 [Perfil] Clubes encontrados:', data?.length || 0)
+      
+      if (data && data.length > 0) {
+        const clubesFormatados = data.map(item => ({
+          id: item.clubes.id,
+          nome: item.clubes.nome,
+          descricao: item.clubes.descricao || 'Clube de atividades físicas',
+          logo: item.clubes.logo || '/img/clube_default.jpg',
+          capa: item.clubes.capa || '/img/clube_capa_default.jpg',
+          categoria: item.clubes.categoria || 'Esporte',
+          localizacao: item.clubes.localizacao || 'Local não informado',
+          membros: item.clubes.membros_total || 0,
+          data_entrada: item.data_entrada
+        }))
+        setClubesUsuario(clubesFormatados)
+        console.log('✅ [Perfil] Clubes carregados:', clubesFormatados.length)
+      } else {
+        setClubesUsuario([])
+        console.log('⚠️ [Perfil] Usuário não participa de nenhum clube')
+      }
+    } catch (error) {
+      console.error('❌ [Perfil] Erro ao carregar clubes do usuário:', error)
+      setClubesUsuario([])
+    }
   }
 
   // ==================== CARREGAR PERFIL DO USUÁRIO ====================
@@ -159,7 +226,7 @@ const Perfil = () => {
     }
   }
 
-  // ==================== CARREGAR POSTS DO USUÁRIO ====================
+  // ==================== CARREGAR POSTS DO USUÁRIO COM COMENTÁRIOS ====================
   const loadUserPosts = async (usuarioId) => {
     try {
       const { data, error } = await supabase
@@ -178,8 +245,32 @@ const Perfil = () => {
       if (error) throw error
       
       if (data && data.length > 0) {
+        const comentariosMap = {}
+        for (const post of data) {
+          const { data: comentariosData } = await supabase
+            .from('comentarios')
+            .select(`
+              *,
+              usuarios (id, nome, avatar)
+            `)
+            .eq('atividade_id', post.id)
+            .order('created_at', { ascending: true })
+          
+          if (comentariosData) {
+            comentariosMap[post.id] = comentariosData.map(c => ({
+              id: c.id,
+              usuario: c.usuarios?.nome || 'Usuário',
+              avatar: c.usuarios?.avatar || '/img/usuarios/default.jpg',
+              texto: c.texto,
+              data: new Date(c.created_at).toLocaleString()
+            }))
+          } else {
+            comentariosMap[post.id] = []
+          }
+        }
+        setPostComentarios(comentariosMap)
+        
         const formattedPosts = data.map(post => {
-          // Pegar avatar do usuário diretamente do join
           const postAvatar = post.usuarios?.avatar || editForm.avatar || '/img/usuarios/default.jpg'
           const postNome = post.usuarios?.nome || editForm.nome || 'Usuário'
           
@@ -200,6 +291,7 @@ const Perfil = () => {
               month: 'long', 
               year: 'numeric' 
             }),
+            titulo: post.titulo || post.tipo,
             local: post.local || 'Local não informado',
             atividade: post.tipo || 'Atividade',
             icone: icone,
@@ -209,13 +301,13 @@ const Perfil = () => {
               { label: "Ritmo", valor: post.pace || "0:00/km" }
             ],
             imagens: post.imagens && post.imagens.length > 0 ? post.imagens : ["/img/atividade_perfil.jpg"],
-            curtidas: post.curtidas || 0,
-            comentarios: []
+            curtidas: post.curtidas || 0
           }
         })
         setPosts(formattedPosts)
       } else {
         setPosts([])
+        setPostComentarios({})
       }
     } catch (error) {
       console.error('Erro ao carregar posts:', error)
@@ -270,6 +362,38 @@ const Perfil = () => {
     }
   }
 
+  // ==================== CARREGAR CURTIDAS DE UM POST ====================
+  const carregarCurtidasDoPost = async (postId) => {
+    try {
+      const { data, error } = await supabase
+        .from('curtidas')
+        .select(`
+          *,
+          usuarios (id, nome, avatar)
+        `)
+        .eq('atividade_id', postId)
+        .order('created_at', { ascending: false })
+      
+      if (error) throw error
+      
+      if (data && data.length > 0) {
+        const usuariosQueCurtiram = data.map(item => ({
+          id: item.usuarios.id,
+          nome: item.usuarios.nome,
+          avatar: item.usuarios.avatar || '/img/usuarios/default.jpg',
+          data: new Date(item.created_at).toLocaleString()
+        }))
+        
+        setCurtidasDoPost(prev => ({ ...prev, [postId]: usuariosQueCurtiram }))
+        return usuariosQueCurtiram
+      }
+      return []
+    } catch (error) {
+      console.error('Erro ao carregar curtidas:', error)
+      return []
+    }
+  }
+
   // ==================== SEGUIR USUÁRIO ====================
   const handleFollow = async () => {
     if (!user) return
@@ -306,14 +430,15 @@ const Perfil = () => {
 
   // ==================== NOVO POST ====================
   const handleNewPost = async () => {
-    if (!newPost.atividade || !newPost.local) {
-      addNotification('Campos obrigatórios', 'Preencha o título e localização da atividade!', 'warning')
+    if (!newPost.titulo || !newPost.tipo || !newPost.local) {
+      addNotification('Campos obrigatórios', 'Preencha o título, tipo de atividade e localização!', 'warning')
       return
     }
 
     const novoPost = {
       usuario_id: user.id,
-      tipo: newPost.atividade,
+      tipo: newPost.tipo,
+      titulo: newPost.titulo,
       local: newPost.local,
       distancia: newPost.distancia || "0 km",
       tempo: newPost.tempo || "00:00",
@@ -334,7 +459,8 @@ const Perfil = () => {
     addNotification('Post criado!', 'Sua atividade foi publicada com sucesso!', 'success')
     setShowPostModal(false)
     setNewPost({
-      atividade: '',
+      titulo: '',
+      tipo: 'Corrida',
       local: '',
       distancia: '',
       tempo: '',
@@ -388,6 +514,8 @@ const Perfil = () => {
       
       if (error) throw error
       
+      await supabase.rpc('incrementar_curtida', { post_id: postId })
+      
       setPosts(posts.map(post => 
         post.id === postId ? { ...post, curtidas: (post.curtidas || 0) + 1 } : post
       ))
@@ -399,18 +527,72 @@ const Perfil = () => {
   }
 
   // ==================== VER CURTIDAS ====================
-  const handleVerCurtidas = (post) => {
-    setSelectedPost(post)
+  const handleVerCurtidas = async (post) => {
+    let curtidas = curtidasDoPost[post.id]
+    if (!curtidas) {
+      curtidas = await carregarCurtidasDoPost(post.id)
+    }
+    
+    setSelectedPost({ 
+      ...post, 
+      curtidas: post.curtidas,
+      listaCurtidas: curtidas || []
+    })
     setShowLikesModal(true)
   }
 
   // ==================== VER COMENTÁRIOS ====================
   const handleVerComentarios = (post) => {
-    setSelectedPost(post)
+    setSelectedPost({ ...post, comentarios: postComentarios[post.id] || [] })
     setShowCommentsModal(true)
   }
 
-  // ==================== ADICIONAR COMENTÁRIO ====================
+  // ==================== ADICIONAR COMENTÁRIO NO PERFIL ====================
+  const handleAdicionarComentarioPerfil = async (postId, texto) => {
+    if (!texto.trim()) return
+    
+    try {
+      const { error } = await supabase.from('comentarios').insert([{
+        atividade_id: postId,
+        usuario_id: user.id,
+        texto: texto
+      }])
+      
+      if (error) throw error
+      
+      const { data: novoComentario } = await supabase
+        .from('comentarios')
+        .select(`
+          *,
+          usuarios (id, nome, avatar)
+        `)
+        .eq('atividade_id', postId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+      
+      if (novoComentario && novoComentario[0]) {
+        const comentarioFormatado = {
+          id: novoComentario[0].id,
+          usuario: novoComentario[0].usuarios?.nome || user?.nome,
+          avatar: novoComentario[0].usuarios?.avatar || user?.avatar || '/img/usuarios/default.jpg',
+          texto: novoComentario[0].texto,
+          data: new Date(novoComentario[0].created_at).toLocaleString()
+        }
+        
+        setPostComentarios(prev => ({
+          ...prev,
+          [postId]: [...(prev[postId] || []), comentarioFormatado]
+        }))
+      }
+      
+      addNotification('💬 Comentário!', 'Seu comentário foi publicado!', 'success', 'fa-comment')
+    } catch (error) {
+      console.error('Erro ao comentar:', error)
+      addNotification('Erro', 'Não foi possível comentar', 'error')
+    }
+  }
+
+  // ==================== ADICIONAR COMENTÁRIO NO MODAL ====================
   const handleAdicionarComentario = async (postId, comentarioTexto) => {
     if (!comentarioTexto.trim()) return
     
@@ -427,6 +609,34 @@ const Perfil = () => {
     }
     
     addNotification('Comentário adicionado!', 'Seu comentário foi publicado!', 'success')
+    
+    const { data: comentariosData } = await supabase
+      .from('comentarios')
+      .select(`
+        *,
+        usuarios (id, nome, avatar)
+      `)
+      .eq('atividade_id', postId)
+      .order('created_at', { ascending: true })
+    
+    if (comentariosData) {
+      const formatted = comentariosData.map(c => ({
+        id: c.id,
+        usuario: c.usuarios?.nome || 'Usuário',
+        avatar: c.usuarios?.avatar || '/img/usuarios/default.jpg',
+        texto: c.texto,
+        data: new Date(c.created_at).toLocaleString()
+      }))
+      setPostComentarios(prev => ({ ...prev, [postId]: formatted }))
+    }
+  }
+
+  // ==================== TOGGLE COMENTÁRIOS PERFIL ====================
+  const toggleComentariosPerfil = (postId) => {
+    setComentariosVisiveisPerfil(prev => ({
+      ...prev,
+      [postId]: !prev[postId]
+    }))
   }
 
   // ==================== EDITAR PERFIL ====================
@@ -726,7 +936,10 @@ const Perfil = () => {
                           </button>
                         )}
                       </div>
-                      <div className="feed-activity"><i className={`fas ${post.icone}`}></i> {post.atividade}</div>
+                      <div className="feed-activity">
+                        <i className={`fas ${post.icone}`}></i> 
+                        <span className="feed-titulo">{post.titulo}</span>
+                      </div>
                       <div className="feed-metrics">
                         {post.metricas.map((m, idx) => (
                           <div key={idx} className="metric">
@@ -748,13 +961,71 @@ const Perfil = () => {
                         </div>
                       </div>
                       <div className="feed-actions">
-                        <button className="action-btn" onClick={() => handleVerCurtidas(post)}>
-                          <i className="far fa-heart"></i> {post.curtidas} curtidas
+                        <button 
+                          className={`action-btn ${likedPosts[post.id] ? 'active' : ''}`} 
+                          onClick={() => handleCurtir(post.id)}
+                        >
+                          <i className={likedPosts[post.id] ? 'fas fa-heart' : 'far fa-heart'}></i>
+                          <span>{post.curtidas} curtidas</span>
                         </button>
-                        <button className="action-btn" onClick={() => handleVerComentarios(post)}>
-                          <i className="far fa-comment"></i> {post.comentarios?.length || 0} comentários
+                        <button className="action-btn" onClick={() => toggleComentariosPerfil(post.id)}>
+                          <i className="far fa-comment"></i> 
+                          <span>{postComentarios[post.id]?.length || 0} comentários</span>
                         </button>
                       </div>
+                      
+                      {/* Área de comentários no Perfil */}
+                      {comentariosVisiveisPerfil[post.id] && (
+                        <div className="comentarios-area">
+                          <div className="comentarios-lista">
+                            {postComentarios[post.id]?.map((com, idx) => (
+                              <div key={idx} className="comentario-item">
+                                <img 
+                                  src={com.avatar || '/img/usuarios/default.jpg'} 
+                                  alt={com.usuario}
+                                  onError={(e) => { e.target.src = '/img/usuarios/default.jpg' }}
+                                />
+                                <div className="comentario-content">
+                                  <strong>{com.usuario}</strong>
+                                  <p>{com.texto}</p>
+                                  <small>{com.data}</small>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="comment-row">
+                            <div className="comment-avatar">
+                              <img 
+                                src={user?.avatar || '/img/usuarios/default.jpg'} 
+                                alt={user?.nome}
+                                onError={(e) => { e.target.src = '/img/usuarios/default.jpg' }}
+                              />
+                            </div>
+                            <input 
+                              type="text" 
+                              className="comment-input" 
+                              id={`input-coment-perfil-${post.id}`}
+                              placeholder="Escreva um comentário..." 
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleAdicionarComentarioPerfil(post.id, e.target.value)
+                                  e.target.value = ''
+                                }
+                              }}
+                            />
+                            <button 
+                              className="comment-send"
+                              onClick={() => {
+                                const input = document.getElementById(`input-coment-perfil-${post.id}`)
+                                handleAdicionarComentarioPerfil(post.id, input.value)
+                                input.value = ''
+                              }}
+                            >
+                              <i className="fa-solid fa-paper-plane"></i>
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (
@@ -797,24 +1068,47 @@ const Perfil = () => {
                 <div className="month-item"><span>Março</span><div className="bar"><div style={{ width: '60%' }}></div></div><span>120 km</span></div>
               </div>
             </div>
+            
+            {/* Clubes Participantes - VERSÃO ATUALIZADA */}
             <div className="sidebar-card">
               <h3><i className="fa-solid fa-users"></i> Clubes Participantes</h3>
               <div className="club-list">
-                <div className="club-item" onClick={() => navigate('/clubes')}>
-                  <div className="club-icon"><img src="/img/outros/corredores_sjc.png" alt="Clube" /></div>
-                  <span className="clube-name">Corredores de SJC e Região</span>
-                  <i className="fas fa-chevron-right"></i>
-                </div>
-                <div className="club-item" onClick={() => navigate('/clubes')}>
-                  <div className="club-icon"><img src="/img/outros/ciclotech.png" alt="Clube" /></div>
-                  <span className="clube-name">Ciclotech</span>
-                  <i className="fas fa-chevron-right"></i>
-                </div>
-                <div className="club-item" onClick={() => navigate('/clubes')}>
-                  <div className="club-icon"><img src="/img/forza icon.png" alt="Clube" /></div>
-                  <span className="clube-name">FORZA</span>
-                  <i className="fas fa-chevron-right"></i>
-                </div>
+                {clubesUsuario.length > 0 ? (
+                  clubesUsuario.map(clube => (
+                    <div key={clube.id} className="club-item" onClick={() => navigate(`/clube/${clube.id}`)}>
+                      <div className="club-icon">
+                        <img 
+                          src={clube.logo} 
+                          alt={clube.nome}
+                          onError={(e) => { e.target.src = '/img/clube_default.jpg' }}
+                        />
+                      </div>
+                      <div className="club-info">
+                        <div className="club-name">{clube.nome}</div>
+                        <div className="club-meta">
+                          <span><i className="fa-solid fa-tag"></i> {clube.categoria}</span>
+                          <span><i className="fa-solid fa-users"></i> {clube.membros || 0} membros</span>
+                        </div>
+                        {clube.localizacao && clube.localizacao !== 'Local não informado' && (
+                          <div className="club-meta">
+                            <i className="fa-solid fa-location-dot"></i> {clube.localizacao}
+                          </div>
+                        )}
+                      </div>
+                      <i className="fas fa-chevron-right"></i>
+                    </div>
+                  ))
+                ) : (
+                  <div className="empty-clubes">
+                    <i className="fa-solid fa-users-slash"></i>
+                    <p>{isOwnProfile ? 'Você ainda não participa de nenhum clube' : 'Este usuário não participa de nenhum clube'}</p>
+                    {isOwnProfile && (
+                      <button className="btn-explorar-clubes" onClick={() => navigate('/clubes')}>
+                        Explorar Clubes
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -825,32 +1119,107 @@ const Perfil = () => {
           <div className="modal-overlay" onClick={() => setShowPostModal(false)}>
             <div className="modal-content post-modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
-                <h3>Novo post</h3>
+                <h3>Nova atividade</h3>
                 <button className="close-modal" onClick={() => setShowPostModal(false)}><i className="fas fa-times"></i></button>
               </div>
               <div className="modal-body">
                 <div className="form-group">
                   <label>Título da atividade *</label>
-                  <input type="text" placeholder="Ex: Corrida matinal..." value={newPost.atividade} onChange={(e) => setNewPost({ ...newPost, atividade: e.target.value })} />
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Corrida matinal no parque, Pedal noturno..." 
+                    value={newPost.titulo} 
+                    onChange={(e) => setNewPost({ ...newPost, titulo: e.target.value })} 
+                  />
                 </div>
+
+                <div className="form-group">
+                  <label>Tipo de atividade *</label>
+                  <div className="tipo-atividade-selector">
+                    <button 
+                      type="button"
+                      className={`tipo-btn ${newPost.tipo === 'Corrida' ? 'active' : ''}`}
+                      onClick={() => setNewPost({ ...newPost, tipo: 'Corrida' })}
+                    >
+                      <i className="fas fa-person-running"></i>
+                      <span>Corrida</span>
+                    </button>
+                    <button 
+                      type="button"
+                      className={`tipo-btn ${newPost.tipo === 'Ciclismo' ? 'active' : ''}`}
+                      onClick={() => setNewPost({ ...newPost, tipo: 'Ciclismo' })}
+                    >
+                      <i className="fas fa-bicycle"></i>
+                      <span>Ciclismo</span>
+                    </button>
+                    <button 
+                      type="button"
+                      className={`tipo-btn ${newPost.tipo === 'Natação' ? 'active' : ''}`}
+                      onClick={() => setNewPost({ ...newPost, tipo: 'Natação' })}
+                    >
+                      <i className="fas fa-person-swimming"></i>
+                      <span>Natação</span>
+                    </button>
+                    <button 
+                      type="button"
+                      className={`tipo-btn ${newPost.tipo === 'Treino Funcional' ? 'active' : ''}`}
+                      onClick={() => setNewPost({ ...newPost, tipo: 'Treino Funcional' })}
+                    >
+                      <i className="fas fa-dumbbell"></i>
+                      <span>Treino</span>
+                    </button>
+                    <button 
+                      type="button"
+                      className={`tipo-btn ${newPost.tipo === 'Trilha' ? 'active' : ''}`}
+                      onClick={() => setNewPost({ ...newPost, tipo: 'Trilha' })}
+                    >
+                      <i className="fas fa-hiking"></i>
+                      <span>Trilha</span>
+                    </button>
+                  </div>
+                </div>
+
                 <div className="form-group">
                   <label>Localização *</label>
-                  <input type="text" placeholder="Ex: São José dos Campos, SP" value={newPost.local} onChange={(e) => setNewPost({ ...newPost, local: e.target.value })} />
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Parque da Cidade, São José dos Campos" 
+                    value={newPost.local} 
+                    onChange={(e) => setNewPost({ ...newPost, local: e.target.value })} 
+                  />
                 </div>
+
                 <div className="form-row">
                   <div className="form-group half">
-                    <label>Distância (km)</label>
-                    <input type="text" placeholder="Ex: 5.92" value={newPost.distancia} onChange={(e) => setNewPost({ ...newPost, distancia: e.target.value })} />
+                    <label>Distância</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ex: 10.2 km" 
+                      value={newPost.distancia} 
+                      onChange={(e) => setNewPost({ ...newPost, distancia: e.target.value })} 
+                    />
                   </div>
                   <div className="form-group half">
                     <label>Tempo</label>
-                    <input type="text" placeholder="Ex: 00:39:06" value={newPost.tempo} onChange={(e) => setNewPost({ ...newPost, tempo: e.target.value })} />
+                    <input 
+                      type="text" 
+                      placeholder="Ex: 52:30" 
+                      value={newPost.tempo} 
+                      onChange={(e) => setNewPost({ ...newPost, tempo: e.target.value })} 
+                    />
                   </div>
                 </div>
+
                 <div className="form-group">
                   <label>Ritmo médio</label>
-                  <input type="text" placeholder="Ex: 6:35/km" value={newPost.ritmo} onChange={(e) => setNewPost({ ...newPost, ritmo: e.target.value })} />
+                  <input 
+                    type="text" 
+                    placeholder="Ex: 5:09/km" 
+                    value={newPost.ritmo} 
+                    onChange={(e) => setNewPost({ ...newPost, ritmo: e.target.value })} 
+                  />
                 </div>
+
                 <div className="fotos-section">
                   <div className="fotos-title"><i className="fas fa-image"></i> Fotos (máximo 2)</div>
                   <div className="fotos-grid">
@@ -898,22 +1267,48 @@ const Perfil = () => {
           <div className="modal-overlay" onClick={() => setShowLikesModal(false)}>
             <div className="modal-content small-modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
-                <h3>Curtidas ({selectedPost.curtidas})</h3>
-                <button className="close-modal" onClick={() => setShowLikesModal(false)}><i className="fas fa-times"></i></button>
+                <h3>
+                  <i className="fas fa-heart" style={{ marginRight: '8px' }}></i>
+                  Curtidas ({selectedPost.curtidas || 0})
+                </h3>
+                <button className="close-modal" onClick={() => setShowLikesModal(false)}>
+                  <i className="fas fa-times"></i>
+                </button>
               </div>
               <div className="modal-body likes-list">
-                {selectedPost.curtidas > 0 ? (
-                  Array.from({ length: Math.min(selectedPost.curtidas, 10) }).map((_, idx) => (
+                {selectedPost.listaCurtidas && selectedPost.listaCurtidas.length > 0 ? (
+                  selectedPost.listaCurtidas.map((usuario, idx) => (
                     <div key={idx} className="like-item">
-                      <img src="/img/usuarios/default.jpg" alt="Usuário" />
-                      <div>
-                        <strong>Usuário {idx+1}</strong>
-                        <small>curtiu há {idx+1} hora(s)</small>
+                      <img 
+                        src={usuario.avatar} 
+                        alt={usuario.nome}
+                        onError={(e) => { e.target.src = '/img/usuarios/default.jpg' }}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => {
+                          setShowLikesModal(false)
+                          navigate(`/perfil/${usuario.id}`)
+                        }}
+                      />
+                      <div className="like-info">
+                        <strong 
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => {
+                            setShowLikesModal(false)
+                            navigate(`/perfil/${usuario.id}`)
+                          }}
+                        >
+                          {usuario.nome}
+                        </strong>
+                        <small>Curtiu em {usuario.data}</small>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="empty-comments">Nenhuma curtida ainda</div>
+                  <div className="empty-likes">
+                    <i className="far fa-heart" style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.5 }}></i>
+                    <p>Ninguém curtiu este post ainda.</p>
+                    <p style={{ fontSize: '12px' }}>Seja o primeiro a curtir!</p>
+                  </div>
                 )}
               </div>
             </div>

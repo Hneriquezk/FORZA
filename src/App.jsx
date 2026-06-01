@@ -15,7 +15,6 @@ import Clubes from './pages/Clubes'
 import Desafios from './pages/Desafios'
 import CoachIA from './pages/CoachIA'
 import Analise from './pages/Analise'
-import Resumo from './pages/Resumo'
 import ClubeDetalhes from './pages/ClubeDetalhes'
 import MembrosLista from './pages/MembrosLista'
 import DesafioDetalhes from './pages/DesafioDetalhes';
@@ -116,7 +115,6 @@ function App() {
         <Route path="/desafios" element={<ProtectedRoute><Desafios /></ProtectedRoute>} />
         <Route path="/coach" element={<ProtectedRoute><CoachIA /></ProtectedRoute>} />
         <Route path="/analise" element={<ProtectedRoute><Analise /></ProtectedRoute>} />
-        <Route path="/resumo" element={<ProtectedRoute><Resumo /></ProtectedRoute>} />
         <Route path="/clube/:clubeId" element={<ProtectedRoute><ClubeDetalhes /></ProtectedRoute>} />
         <Route path="/clube/:clubeId/membros" element={<ProtectedRoute><MembrosLista /></ProtectedRoute>} />
         <Route path="/desafio/:id" element={<ProtectedRoute><DesafioDetalhes /></ProtectedRoute>} />

@@ -30,29 +30,25 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     try {
       console.log('Tentando login:', email)
-      
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('*')
-        .eq('email', email)
-        .eq('senha', password)
-        .single()
 
-      if (error) {
+      const { data, error } = await supabase
+        .rpc('login_usuario', {
+          p_email: email,
+          p_senha: password
+        })
+
+      if (error || !data || data.length === 0) {
         console.error('Erro na busca:', error)
         return { success: false, error: 'Email ou senha incorretos!' }
       }
 
-      if (!data) {
-        return { success: false, error: 'Email ou senha incorretos!' }
-      }
+      const userData = data[0]  // a RPC retorna um array
+      setUser(userData)
+      localStorage.setItem('forza_user', JSON.stringify(userData))
 
-      setUser(data)
-      localStorage.setItem('forza_user', JSON.stringify(data))
-      
-      console.log('Login realizado com sucesso:', data.nome)
-      return { success: true, user: data }
-      
+      console.log('Login realizado com sucesso:', userData.nome)
+      return { success: true, user: userData }
+
     } catch (error) {
       console.error('Erro no login:', error)
       return { success: false, error: 'Email ou senha incorretos!' }

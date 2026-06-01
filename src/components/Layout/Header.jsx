@@ -2,7 +2,6 @@ import React from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useAuth } from '../../contexts/AuthContext'  // ← ADICIONADO
-import NotificationBell from '../Common/NotificationBell'
 
 const Header = () => {
   const navigate = useNavigate()
@@ -49,7 +48,6 @@ const Header = () => {
       {/* Para páginas comuns e autenticadas - mostrar ícones normais */}
       {!isSobreNosPage && !isAuthPage && (
         <div className="header-icons">
-          <NotificationBell />
           <button className="theme-toggle-btn" onClick={toggleTheme}>
             <i className={`fas ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}`}></i>
           </button>
